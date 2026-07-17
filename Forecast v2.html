@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SKU Forecast & Safety Stock Analyzer</title>
+<style>
+:root{
+  --bg:#f4f7fb; --panel:#ffffff; --ink:#172033; --muted:#68748a; --line:#d9e0ea;
+  --brand:#173b63; --brand2:#2d6cdf; --ok:#16875d; --warn:#b7791f; --bad:#b42318; --soft:#eef4ff;
+  --shadow:0 10px 28px rgba(23,32,51,.08); --radius:18px;
+  --thbg:#f1f5fb; --thms:#263650; --hoverbg:#f8fbff; --inputbg:#ffffff; --inputline:#cfd8e6;
+  --dropbg:#f8fbff; --dropline:#98acd0; --chartbg:#ffffff; --axis:#cbd5e1; --axislabel:#68748a;
+  --badgebg:#eef4ff; --badgeink:#173b63; --goodbg:#e9f8f1; --goodink:#087348; --warnbg:#fff4dd; --warnink:#905a00;
+  --badbg:#ffe7e3; --badink:#a32014; --graybg:#edf0f5; --grayink:#536073;
+  --headg1:#0f2742; --headg2:#1f5ca8; --noticebg:#eef4ff; --noticeink:#263650; --warnboxbg:#fff8e8;
+  --secbtnbg:#eef4ff; --secbtnink:#173b63; --secbtnline:#bfd1f3; --tabinact:#eef4ff;
+}
+html[data-theme="dark"]{
+  --bg:#0c1322; --panel:#151f35; --ink:#e8eefb; --muted:#96a3bd; --line:#273657;
+  --brand:#9dc0ff; --brand2:#4d8dff; --ok:#3ecf8e; --warn:#f0b64a; --bad:#ff7a66; --soft:#1a2542;
+  --shadow:0 10px 28px rgba(0,0,0,.45);
+  --thbg:#1b2745; --thms:#c9d7f2; --hoverbg:#1c2947; --inputbg:#101a30; --inputline:#33436b;
+  --dropbg:#111c33; --dropline:#3d5388; --chartbg:#111a2f; --axis:#3a4a70; --axislabel:#8fa0c2;
+  --badgebg:#1e2c4f; --badgeink:#b9d0f8; --goodbg:#0e3527; --goodink:#5fe0a8; --warnbg:#3d2f0c; --warnink:#f4c86a;
+  --badbg:#43150f; --badink:#ff9a8a; --graybg:#242f4a; --grayink:#9fb0cd;
+  --headg1:#0a1930; --headg2:#153b73; --noticebg:#1a2542; --noticeink:#c6d4ef; --warnboxbg:#2e2510;
+  --secbtnbg:#1c2947; --secbtnink:#b9d0f8; --secbtnline:#33436b; --tabinact:#1c2947;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);transition:background .25s,color .25s}
+header{background:linear-gradient(135deg,var(--headg1),var(--headg2));color:#fff;padding:24px 28px 28px;position:relative;overflow:hidden}
+header:after{content:"";position:absolute;right:-80px;top:-100px;width:330px;height:330px;background:rgba(255,255,255,.10);border-radius:50%}
+h1{margin:0;font-size:28px;letter-spacing:-.5px}.subtitle{margin:8px 0 0;max-width:1120px;color:#dbe8ff;font-size:15px;line-height:1.45}.author{font-size:12px;color:#c9daf8;margin-top:10px}.author a{color:#fff;font-weight:700}
+.headctrl{position:absolute;top:18px;right:22px;display:flex;gap:8px;z-index:2}
+.headctrl button{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:10px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer;box-shadow:none}
+.headctrl button:hover{background:rgba(255,255,255,.26)}
+main{padding:22px;max-width:1480px;margin:auto}.grid{display:grid;gap:16px}.grid.cols-2{grid-template-columns:1fr 1fr}.grid.cols-3{grid-template-columns:repeat(3,1fr)}.grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}.panel h2{font-size:17px;margin:0 0 12px}.panel h3{font-size:14px;margin:12px 0 8px;color:var(--brand)}
+.drop{border:2px dashed var(--dropline);background:var(--dropbg);border-radius:18px;padding:22px;text-align:center}.drop input{margin-top:14px;color:var(--ink)}.small{font-size:12px;color:var(--muted);line-height:1.45}.muted{color:var(--muted)}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 5px}input,select,button,textarea{font:inherit}input,select{width:100%;border:1px solid var(--inputline);border-radius:10px;padding:9px 10px;background:var(--inputbg);color:var(--ink)}input[type=checkbox]{width:auto;margin-right:8px}
+button{border:none;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer;background:var(--brand2);color:white;box-shadow:0 6px 16px rgba(45,108,223,.20)}
+button.secondary{background:var(--secbtnbg);color:var(--secbtnink);box-shadow:none;border:1px solid var(--secbtnline)}button.danger{background:#b42318}.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.hidden{display:none!important}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)}.kpi .label{font-size:12px;color:var(--muted);font-weight:700}.kpi .value{font-size:26px;font-weight:900;margin-top:4px;color:var(--brand)}.kpi .note{font-size:11px;color:var(--muted);margin-top:4px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;background:var(--badgebg);color:var(--badgeink)}.badge.good{background:var(--goodbg);color:var(--goodink)}.badge.warn{background:var(--warnbg);color:var(--warnink)}.badge.bad{background:var(--badbg);color:var(--badink)}.badge.gray{background:var(--graybg);color:var(--grayink)}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel);max-height:540px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--thbg);color:var(--thms);z-index:1;cursor:pointer;user-select:none}th .arrow{font-size:9px;opacity:.85}
+td.num{text-align:right;font-variant-numeric:tabular-nums}tr:hover td{background:var(--hoverbg)}tbody tr{cursor:pointer}
+.chartbox{min-height:260px;border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:12px;box-shadow:var(--shadow)}.charttitle{font-size:13px;font-weight:900;color:var(--brand);margin-bottom:8px}.svgchart{width:100%;height:230px;display:block}
+.notice{border-left:4px solid var(--brand2);background:var(--noticebg);border-radius:12px;padding:12px;color:var(--noticeink);font-size:13px;line-height:1.45}.warnbox{border-left-color:#b7791f;background:var(--warnboxbg)}
+.status{padding:10px 12px;border-radius:12px;background:var(--soft);color:var(--badgeink);font-size:13px;margin-top:12px}
+.footer{font-size:11px;color:var(--muted);margin:20px 0 0;line-height:1.5}
+.copyright{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.copyright a{color:var(--brand2);font-weight:700}
+.mapping{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.filters{display:grid;grid-template-columns:1.4fr repeat(5,1fr);gap:10px;align-items:end}
+.toggleline{display:flex;align-items:center;gap:8px;margin-top:8px}.pillrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}.recommend{font-size:12px;line-height:1.35;max-width:520px;white-space:normal}
+.modal{position:fixed;inset:0;background:rgba(6,12,24,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+.modalbox{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:900px;width:100%;max-height:92vh;overflow:auto;padding:20px}
+.modalbox h2{margin:0 0 4px;font-size:18px;color:var(--brand)}.modalhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.dstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}.dstat{background:var(--soft);border-radius:12px;padding:10px}.dstat .l{font-size:11px;color:var(--muted);font-weight:700}.dstat .v{font-size:16px;font-weight:900;color:var(--brand);margin-top:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:6px}.legend span{display:inline-flex;align-items:center;gap:5px}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+@media(max-width:1050px){.grid.cols-2,.grid.cols-3,.grid.cols-4,.mapping,.filters,.dstats{grid-template-columns:1fr}header{padding:22px 18px 60px}main{padding:14px}.tablewrap{max-height:420px}.headctrl{top:auto;bottom:12px;right:14px}}
+@media print{body{background:#fff}.panel,.kpi,.chartbox{box-shadow:none}.btnrow,.drop,#configPanel,#filtersPanel,.headctrl{display:none!important}header{color:#111;background:#fff;border-bottom:2px solid #111}.subtitle,.author{color:#333}}
+</style>
+</head>
+<body>
+<header>
+  <div class="headctrl">
+    <button id="langBtn" title="Español / English">EN</button>
+    <button id="themeBtn" title="Tema">🌙</button>
+  </div>
+  <h1 data-i18n="title">SKU Forecast & Safety Stock Analyzer</h1>
+  <div class="subtitle" data-i18n="subtitle"></div>
+  <div class="author"><span data-i18n="author"></span> <a href="https://www.linkedin.com/in/jvazquezh/" target="_blank" rel="noopener">Jesús Vázquez</a> · © <span id="yearTop"></span></div>
+</header>
+<main>
+  <section class="grid cols-2">
+    <div class="panel">
+      <h2 data-i18n="sec1"></h2>
+      <div class="drop">
+        <strong data-i18n="dropTitle"></strong>
+        <div class="small" data-i18n="dropHint"></div>
+        <input id="fileInput" type="file" accept=".xlsx,.csv" />
+        <div class="btnrow" style="justify-content:center">
+          <button class="secondary" id="demoBtn" data-i18n="demoBtn"></button>
+          <button class="secondary" id="templateBtn" data-i18n="templateBtn"></button>
+        </div>
+      </div>
+      <div id="loadStatus" class="status hidden"></div>
+      <div class="notice warnbox" style="margin-top:12px">
+        <strong data-i18n="noteLbl"></strong> <span data-i18n="note"></span>
+      </div>
+    </div>
+    <div class="panel" id="configPanel">
+      <h2 data-i18n="sec2"></h2>
+      <div class="grid cols-4">
+        <div><label data-i18n="lblService"></label><input id="serviceLevel" type="number" min="50" max="99.9" step="0.1" value="95" /></div>
+        <div><label data-i18n="lblLtUnit"></label><select id="ltUnit"><option value="days" data-i18n="days"></option><option value="weeks" data-i18n="weeksU"></option></select></div>
+        <div><label data-i18n="lblDefLT"></label><input id="defaultLT" type="number" min="0" step="0.1" value="21" /></div>
+        <div><label data-i18n="lblDefGR"></label><input id="defaultGR" type="number" min="0" step="0.1" value="5" /></div>
+      </div>
+      <div class="grid cols-4">
+        <div><label data-i18n="lblAlpha"></label><input id="alpha" type="number" min="0.01" max="0.99" step="0.01" value="0.30" /></div>
+        <div><label data-i18n="lblBeta"></label><input id="beta" type="number" min="0.01" max="0.99" step="0.01" value="0.10" /></div>
+        <div><label data-i18n="lblGamma"></label><input id="gamma" type="number" min="0.01" max="0.99" step="0.01" value="0.10" /></div>
+        <div><label data-i18n="lblSeason"></label><select id="seasonLen"><option value="auto" data-i18n="auto"></option><option value="12">12</option><option value="52">52</option><option value="4">4</option></select></div>
+      </div>
+      <div class="grid cols-3">
+        <div class="toggleline"><input id="excludeOutliers" type="checkbox" checked /><span class="small"><strong data-i18n="exclOut"></strong> <span data-i18n="exclOut2"></span></span></div>
+        <div><label data-i18n="lblIqr"></label><input id="iqrK" type="number" min="1" max="5" step="0.1" value="1.5" /></div>
+        <div><label data-i18n="lblMa"></label><input id="maWindow" type="number" min="2" max="26" step="1" value="4" /></div>
+      </div>
+      <div id="mappingPanel" class="hidden">
+        <h3 data-i18n="mapTitle"></h3>
+        <div class="mapping">
+          <div><label data-i18n="mapSku"></label><select id="skuCol"></select></div>
+          <div><label data-i18n="mapLt"></label><select id="ltCol"></select></div>
+          <div><label data-i18n="mapGr"></label><select id="grCol"></select></div>
+          <div><label data-i18n="mapFirst"></label><select id="firstPeriodCol"></select></div>
+          <div><label data-i18n="mapLast"></label><select id="lastPeriodCol"></select></div>
+        </div>
+        <div class="btnrow"><button id="analyzeBtn" data-i18n="analyzeBtn"></button><button class="secondary" id="resetBtn" data-i18n="resetBtn"></button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div class="grid cols-4" style="margin-top:16px">
+      <div class="kpi"><div class="label" data-i18n="kSkus"></div><div class="value" id="kpiSkus">0</div><div class="note" data-i18n="kSkusNote"></div></div>
+      <div class="kpi"><div class="label" data-i18n="kSS"></div><div class="value" id="kpiSS">0</div><div class="note" data-i18n="kSSNote"></div></div>
+      <div class="kpi"><div class="label" data-i18n="kInt"></div><div class="value" id="kpiIntermittent">0%</div><div class="note" data-i18n="kIntNote"></div></div>
+      <div class="kpi"><div class="label" data-i18n="kOut"></div><div class="value" id="kpiOutliers">0</div><div class="note" data-i18n="kOutNote"></div></div>
+    </div>
+
+    <div class="panel" id="filtersPanel" style="margin-top:16px">
+      <h2 data-i18n="filters"></h2>
+      <div class="filters">
+        <div><label data-i18n="searchSku"></label><input id="searchSku" data-i18n-ph="searchPh" /></div>
+        <div><label>ABC</label><select id="filterABC"></select></div>
+        <div><label>XYZ</label><select id="filterXYZ"></select></div>
+        <div><label data-i18n="demandType"></label><select id="filterDemand"></select></div>
+        <div><label data-i18n="modelLbl"></label><select id="filterModel"></select></div>
+        <div><label data-i18n="metaFilter"></label><select id="filterMeta"></select></div>
+      </div>
+      <div id="metaValueWrap" class="hidden" style="max-width:280px;margin-top:10px"><label data-i18n="metaValue"></label><select id="filterMetaValue"></select></div>
+      <div class="btnrow"><button class="secondary" id="applyFiltersBtn" data-i18n="apply"></button><button class="secondary" id="clearFiltersBtn" data-i18n="clearF"></button></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <div class="chartbox"><div class="charttitle" data-i18n="chScatter"></div><svg id="scatterChart" class="svgchart"></svg></div>
+      <div class="chartbox"><div class="charttitle" data-i18n="chWeekly"></div><svg id="weeklyChart" class="svgchart"></svg></div>
+      <div class="chartbox"><div class="charttitle" data-i18n="chMatrix"></div><svg id="matrixChart" class="svgchart"></svg></div>
+      <div class="chartbox"><div class="charttitle" data-i18n="chDemand"></div><svg id="demandChart" class="svgchart"></svg></div>
+      <div class="chartbox"><div class="charttitle" data-i18n="chTop"></div><svg id="topSSChart" class="svgchart"></svg></div>
+      <div class="chartbox"><div class="charttitle" data-i18n="chModel"></div><svg id="modelChart" class="svgchart"></svg></div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <h2 style="margin:0" data-i18n="results"></h2>
+        <div class="btnrow" style="margin:0">
+          <button class="secondary" id="toggleRowsBtn"></button>
+          <button id="downloadXlsxBtn" data-i18n="dlXlsx"></button>
+          <button class="secondary" id="downloadCsvBtn" data-i18n="dlCsv"></button>
+          <button class="secondary" id="downloadPdfBtn" data-i18n="dlPdf"></button>
+        </div>
+      </div>
+      <div class="pillrow" id="summaryPills"></div>
+      <p class="small" data-i18n="tableNote"></p>
+      <div class="tablewrap"><table id="resultsTable"></table></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <strong>Disclaimer:</strong> <span data-i18n="disclaimer"></span>
+    <div class="copyright">© <span id="yearBottom"></span> <strong>Jesús Vázquez</strong> — <span data-i18n="rights"></span> · <a href="https://www.linkedin.com/in/jvazquezh/" target="_blank" rel="noopener">LinkedIn: /in/jvazquezh</a></div>
+  </div>
+</main>
+
+<div id="detailModal" class="modal hidden">
+  <div class="modalbox">
+    <div class="modalhead">
+      <div><h2 id="dTitle"></h2><div class="small" id="dSub"></div></div>
+      <button class="secondary" id="dClose" data-i18n="close"></button>
+    </div>
+    <div class="dstats" id="dStats"></div>
+    <div class="charttitle" data-i18n="dSeries"></div>
+    <svg id="detailChart" class="svgchart" style="height:280px"></svg>
+    <div class="legend" id="dLegend"></div>
+    <div class="notice" style="margin-top:12px" id="dRec"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const state = {headers:[], rows:[], metadataCols:[], results:[], filtered:[], periodHeaders:[], fileName:'', mapping:null, sort:{key:'advancedSS',dir:-1}, topOnly:true};
+const PERIOD_MAX_TABLE_ROWS = 300;
+
+/* ===================== i18n ===================== */
+const I18N = {
+es:{
+ title:'SKU Forecast & Safety Stock Analyzer',
+ subtitle:'Aplicación HTML standalone para cargar Excel, clasificar demanda histórica, calcular CV, ADI, ABC/XYZ, safety stock, punto de reorden y recomendar modelos de pronóstico por SKU.',
+ author:'Preparado para análisis ejecutivo de nivel de servicio | Autor:',
+ sec1:'1. Carga de archivo', dropTitle:'Sube un archivo .xlsx o .csv',
+ dropHint:'Estructura esperada: una fila por SKU, columnas de metadatos, LT, GR processing y periodos de consumo. La app detecta columnas de periodos automáticamente y permite corregir el mapeo.',
+ demoBtn:'▶ Cargar demo: 2,500 SKUs × 100 semanas', templateBtn:'⬇ Descargar template Excel',
+ noteLbl:'Nota:', note:'acepta semanas, meses o periodos genéricos siempre que las columnas de consumo sean numéricas y contiguas. Descarga el template para ver el formato esperado.',
+ sec2:'2. Parámetros ejecutivos', lblService:'Nivel de servicio objetivo (%)', lblLtUnit:'Unidad de LT / GR', days:'Días', weeksU:'Semanas',
+ lblDefLT:'LT default si falta', lblDefGR:'GR default si falta', lblAlpha:'Alfa suavización', lblBeta:'Beta tendencia', lblGamma:'Gamma estacionalidad',
+ lblSeason:'Longitud estacional', auto:'Auto', exclOut:'Excluir outliers', exclOut2:'de métricas y pronóstico', lblIqr:'Regla IQR: Q3 + k*IQR', lblMa:'Lookback promedio móvil',
+ mapTitle:'Mapeo detectado', mapSku:'SKU / Material', mapLt:'LT manufactura', mapGr:'GR processing / tránsito', mapFirst:'Primer periodo', mapLast:'Último periodo',
+ analyzeBtn:'Analizar SKUs', resetBtn:'Limpiar',
+ kSkus:'SKUs analizados', kSkusNote:'Registros válidos procesados', kSS:'Safety stock total', kSSNote:'Unidades estimadas',
+ kInt:'SKUs intermitentes/lumpy', kIntNote:'Riesgo de forecast tradicional', kOut:'Outliers detectados', kOutNote:'Periodos marcados como atípicos',
+ filters:'Filtros', searchSku:'Buscar SKU', searchPh:'Material, SKU o descripción', all:'Todos', demandType:'Tipo demanda', modelLbl:'Modelo',
+ metaFilter:'Filtro metadata', noFilter:'Sin filtro', metaValue:'Valor metadata', apply:'Aplicar filtros', clearF:'Limpiar filtros',
+ chScatter:'Matriz ADI vs CV²: tipo de demanda', chWeekly:'Demanda total por periodo (estacionalidad)', chMatrix:'Matriz ABC / XYZ (conteo de SKUs)',
+ chDemand:'Distribución por clase de demanda', chTop:'Top 15 SKUs por safety stock', chModel:'Distribución por modelo recomendado',
+ results:'Resultados ejecutivos por SKU', dlXlsx:'⬇ Descargar Excel', dlCsv:'⬇ Descargar CSV', dlPdf:'⬇ PDF ejecutivo',
+ tableNote:'Por defecto se muestran los 10 SKUs más relevantes (mayor safety stock). Haz clic en un encabezado para ordenar y en una fila para ver el detalle del SKU. Las descargas incluyen todos los SKUs filtrados.',
+ btnTop:'☆ Solo Top 10', btnAll:n=>`Ver todos (${n})`,
+ disclaimer:'Esta herramienta es una aplicación analítica standalone para diagnóstico y planeación. Los cálculos son una base técnica para discusión de S&OP, MRP e inventarios; no sustituyen la validación operativa de parámetros maestros, restricciones de capacidad, políticas comerciales, MOQ, lotes mínimos, vida de anaquel ni acuerdos de servicio. Uso sujeto a revisión profesional del usuario.',
+ rights:'Todos los derechos reservados.',
+ statusRead:'Leyendo archivo: ', statusAnalyzing:'Analizando SKUs y calculando modelos...',
+ statusLoaded:(n,r,c)=>`${n}: ${r} filas y ${c} columnas detectadas. Revisa el mapeo y presiona "Analizar SKUs".`,
+ statusDone:(s,o)=>`Análisis terminado: ${s} SKUs, ${o} outliers detectados.`,
+ errRead:'No se pudo leer el archivo. Detalle: ', alertPeriod:'El último periodo debe estar después del primer periodo.',
+ thSku:'SKU', thType:'Tipo demanda', thAvg:'Vol. prom / periodo', thCv:'CV', thCv2:'CV²', thAdi:'ADI', thLt:'LT total sem', thSS:'Safety stock', thRop:'ROP',
+ thFc:'Forecast sig.', thModel:'Modelo', thErr:'Error WMAPE', thRisk:'Riesgo', thOutliers:'Outliers', thRec:'Recomendación',
+ riskHigh:'Alto', riskMed:'Medio', riskOk:'Controlado', riskNone:'Sin demanda',
+ pillFiltered:(a,b)=>`SKUs filtrados: ${a} de ${b}`, pillA:n=>`ABC A: ${n}`, pillHigh:n=>`Riesgo alto: ${n}`, pillService:s=>`Servicio objetivo: ${s}%`,
+ recNoDemand:'Revisar master data, obsolescencia o política make-to-order. No incrementar inventario sin señal comercial.',
+ recSmooth:m=>`Demanda estable. Usar ${m}, revisar sesgo y mantener safety stock estadístico.`,
+ recIntermittent:m=>`Demanda intermitente. Priorizar ${m}, revisar min-max, LT y frecuencia de reposición.`,
+ recErratic:m=>`Demanda frecuente pero variable. Usar ${m} con tratamiento de outliers y revisión de causas especiales.`,
+ recLumpy:m=>`Demanda lumpy. Evitar forecast tradicional puro; usar ${m}, política de revisión periódica/min-max y validación comercial.`,
+ close:'✕ Cerrar', dSeries:'Serie histórica, outliers y forecast',
+ dAvg:'Prom / periodo', dSS:'Safety stock', dRop:'Punto de reorden', dFc:'Forecast sig. periodo',
+ legActual:'Demanda', legMA:'Promedio móvil', legOut:'Outlier', legFc:'Forecast',
+ axPeriods:'Periodos', adiAxis:'ADI / intervalo promedio de demanda',
+ tplData:'Datos', tplInstr:'Instrucciones', tplName:'template_forecast_skus.xlsx',
+ pdfTitle:'SKU Forecast & Safety Stock Analyzer - Reporte Ejecutivo', pdfDate:'Fecha: ', pdfSkus:'SKUs analizados: ', pdfSS:'Safety stock total: ',
+ pdfInt:'Intermitentes/Lumpy: ', pdfOut:'Outliers detectados: ', pdfTop:'Top SKUs por safety stock:',
+ pdfRec:'Recomendacion general: Priorizar SKUs A/Z, lumpy o intermitentes con alto LT para mejorar nivel de servicio y reducir riesgo de faltantes.'
+},
+en:{
+ title:'SKU Forecast & Safety Stock Analyzer',
+ subtitle:'Standalone HTML application to load Excel files, classify historical demand, compute CV, ADI, ABC/XYZ, safety stock, reorder point and recommend a forecasting model per SKU.',
+ author:'Built for executive service-level analysis | Author:',
+ sec1:'1. File upload', dropTitle:'Upload an .xlsx or .csv file',
+ dropHint:'Expected layout: one row per SKU, metadata columns, LT, GR processing and consumption periods. The app auto-detects period columns and lets you fix the mapping.',
+ demoBtn:'▶ Load demo: 2,500 SKUs × 100 weeks', templateBtn:'⬇ Download Excel template',
+ noteLbl:'Note:', note:'weeks, months or generic periods are accepted as long as consumption columns are numeric and contiguous. Download the template to see the expected format.',
+ sec2:'2. Executive parameters', lblService:'Target service level (%)', lblLtUnit:'LT / GR unit', days:'Days', weeksU:'Weeks',
+ lblDefLT:'Default LT if missing', lblDefGR:'Default GR if missing', lblAlpha:'Smoothing alpha', lblBeta:'Trend beta', lblGamma:'Seasonality gamma',
+ lblSeason:'Season length', auto:'Auto', exclOut:'Exclude outliers', exclOut2:'from metrics and forecast', lblIqr:'IQR rule: Q3 + k*IQR', lblMa:'Moving-average lookback',
+ mapTitle:'Detected mapping', mapSku:'SKU / Material', mapLt:'Manufacturing LT', mapGr:'GR processing / transit', mapFirst:'First period', mapLast:'Last period',
+ analyzeBtn:'Analyze SKUs', resetBtn:'Reset',
+ kSkus:'SKUs analyzed', kSkusNote:'Valid records processed', kSS:'Total safety stock', kSSNote:'Estimated units',
+ kInt:'Intermittent/lumpy SKUs', kIntNote:'Traditional forecast risk', kOut:'Outliers detected', kOutNote:'Periods flagged as atypical',
+ filters:'Filters', searchSku:'Search SKU', searchPh:'Material, SKU or description', all:'All', demandType:'Demand type', modelLbl:'Model',
+ metaFilter:'Metadata filter', noFilter:'No filter', metaValue:'Metadata value', apply:'Apply filters', clearF:'Clear filters',
+ chScatter:'ADI vs CV² matrix: demand type', chWeekly:'Total demand per period (seasonality)', chMatrix:'ABC / XYZ matrix (SKU count)',
+ chDemand:'Distribution by demand class', chTop:'Top 15 SKUs by safety stock', chModel:'Distribution by recommended model',
+ results:'Executive results per SKU', dlXlsx:'⬇ Download Excel', dlCsv:'⬇ Download CSV', dlPdf:'⬇ Executive PDF',
+ tableNote:'By default the 10 most relevant SKUs are shown (highest safety stock). Click a column header to sort and a row to open SKU detail. Downloads include all filtered SKUs.',
+ btnTop:'☆ Top 10 only', btnAll:n=>`Show all (${n})`,
+ disclaimer:'This tool is a standalone analytical application for diagnosis and planning. Calculations are a technical baseline for S&OP, MRP and inventory discussions; they do not replace operational validation of master data, capacity constraints, commercial policies, MOQ, minimum lots, shelf life or service agreements. Use subject to the user\'s professional review.',
+ rights:'All rights reserved.',
+ statusRead:'Reading file: ', statusAnalyzing:'Analyzing SKUs and computing models...',
+ statusLoaded:(n,r,c)=>`${n}: ${r} rows and ${c} columns detected. Review the mapping and press "Analyze SKUs".`,
+ statusDone:(s,o)=>`Analysis complete: ${s} SKUs, ${o} outliers detected.`,
+ errRead:'Could not read the file. Detail: ', alertPeriod:'Last period must come after first period.',
+ thSku:'SKU', thType:'Demand type', thAvg:'Avg vol / period', thCv:'CV', thCv2:'CV²', thAdi:'ADI', thLt:'Total LT wks', thSS:'Safety stock', thRop:'ROP',
+ thFc:'Next forecast', thModel:'Model', thErr:'WMAPE error', thRisk:'Risk', thOutliers:'Outliers', thRec:'Recommendation',
+ riskHigh:'High', riskMed:'Medium', riskOk:'Controlled', riskNone:'No demand',
+ pillFiltered:(a,b)=>`Filtered SKUs: ${a} of ${b}`, pillA:n=>`ABC A: ${n}`, pillHigh:n=>`High risk: ${n}`, pillService:s=>`Target service: ${s}%`,
+ recNoDemand:'Review master data, obsolescence or make-to-order policy. Do not add inventory without a commercial signal.',
+ recSmooth:m=>`Stable demand. Use ${m}, watch bias and keep statistical safety stock.`,
+ recIntermittent:m=>`Intermittent demand. Prioritize ${m}, review min-max, LT and replenishment frequency.`,
+ recErratic:m=>`Frequent but variable demand. Use ${m} with outlier treatment and special-cause review.`,
+ recLumpy:m=>`Lumpy demand. Avoid pure traditional forecasting; use ${m}, periodic review/min-max policy and commercial validation.`,
+ close:'✕ Close', dSeries:'Historical series, outliers and forecast',
+ dAvg:'Avg / period', dSS:'Safety stock', dRop:'Reorder point', dFc:'Next period forecast',
+ legActual:'Demand', legMA:'Moving average', legOut:'Outlier', legFc:'Forecast',
+ axPeriods:'Periods', adiAxis:'ADI / average demand interval',
+ tplData:'Data', tplInstr:'Instructions', tplName:'forecast_sku_template.xlsx',
+ pdfTitle:'SKU Forecast & Safety Stock Analyzer - Executive Report', pdfDate:'Date: ', pdfSkus:'SKUs analyzed: ', pdfSS:'Total safety stock: ',
+ pdfInt:'Intermittent/Lumpy: ', pdfOut:'Outliers detected: ', pdfTop:'Top SKUs by safety stock:',
+ pdfRec:'General recommendation: Prioritize A/Z, lumpy or intermittent SKUs with long LT to improve service level and reduce shortage risk.'
+}};
+let lang = localStorage.getItem('fca_lang') || 'es';
+let theme = localStorage.getItem('fca_theme') || 'light';
+const t = k => I18N[lang][k];
+const locale = () => lang==='es' ? 'es-MX' : 'en-US';
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  $('langBtn').textContent = lang==='es' ? 'EN' : 'ES';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ const v=t(el.getAttribute('data-i18n')); if(typeof v==='string') el.textContent=v; });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.placeholder=t(el.getAttribute('data-i18n-ph'))||''; });
+  ['filterABC','filterXYZ','filterDemand','filterModel'].forEach(id=>{ const el=$(id); if(el.options.length){ el.options[0].textContent=t('all'); } else el.innerHTML=`<option value="">${t('all')}</option>`; });
+  const fm=$('filterMeta'); if(fm.options.length) fm.options[0].textContent=t('noFilter'); else fm.innerHTML=`<option value="">${t('noFilter')}</option>`;
+  const fmv=$('filterMetaValue'); if(fmv.options.length) fmv.options[0].textContent=t('all'); else fmv.innerHTML=`<option value="">${t('all')}</option>`;
+  if(state.results.length) renderDashboard();
+}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', theme);
+  $('themeBtn').textContent = theme==='light' ? '🌙' : '☀️';
+  if(state.results.length) renderCharts(state.filtered);
+}
+$('langBtn').addEventListener('click',()=>{ lang = lang==='es'?'en':'es'; localStorage.setItem('fca_lang',lang); applyLang(); });
+$('themeBtn').addEventListener('click',()=>{ theme = theme==='light'?'dark':'light'; localStorage.setItem('fca_theme',theme); applyTheme(); });
+$('yearTop').textContent = $('yearBottom').textContent = new Date().getFullYear();
+
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function setStatus(msg, show=true){ const el=$('loadStatus'); el.textContent=msg; el.classList.toggle('hidden',!show); }
+function fmt(n,d=2){ if(!Number.isFinite(n)) return ''; return Number(n).toLocaleString(locale(),{maximumFractionDigits:d,minimumFractionDigits:d}); }
+function fmt0(n){ if(!Number.isFinite(n)) return '0'; return Math.round(n).toLocaleString(locale()); }
+function safeNum(v){ if(v===null||v===undefined||v==='') return NaN; if(typeof v==='number') return Number.isFinite(v)?v:NaN; const s=String(v).replace(/,/g,'').trim(); if(!s) return NaN; const n=Number(s); return Number.isFinite(n)?n:NaN; }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function normHeader(s){ return String(s??'').trim().toLowerCase(); }
+function colName(n){ let s=''; n++; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+function mean(arr){ const a=arr.filter(Number.isFinite); if(!a.length) return 0; return a.reduce((x,y)=>x+y,0)/a.length; }
+function stdev(arr){ const a=arr.filter(Number.isFinite); if(a.length<2) return 0; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1)); }
+function sum(arr){ return arr.filter(Number.isFinite).reduce((a,b)=>a+b,0); }
+function quantile(arr,q){ const a=arr.filter(Number.isFinite).sort((x,y)=>x-y); if(!a.length) return NaN; const pos=(a.length-1)*q; const base=Math.floor(pos), rest=pos-base; return a[base+1]!==undefined ? a[base]+rest*(a[base+1]-a[base]) : a[base]; }
+function median(arr){ return quantile(arr,0.5); }
+function clamp(n,min,max){ return Math.min(max,Math.max(min,n)); }
+
+// Acklam inverse normal approximation
+function normInv(p){
+  if(p<=0||p>=1) return NaN;
+  const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.3577518672690,-30.66479806614716,2.506628277459239];
+  const b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572];
+  const c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783];
+  const d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416];
+  const plow=0.02425, phigh=1-plow; let q,r;
+  if(p<plow){ q=Math.sqrt(-2*Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(phigh<p){ q=Math.sqrt(-2*Math.log(1-p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-0.5; r=q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+
+$('fileInput').addEventListener('change', async ev=>{
+  const file=ev.target.files[0]; if(!file) return;
+  state.fileName=file.name; setStatus(t('statusRead')+file.name+' ...');
+  try{
+    const buf=await file.arrayBuffer();
+    let rows;
+    if(file.name.toLowerCase().endsWith('.csv')) rows=parseCsv(new TextDecoder().decode(buf));
+    else rows=await parseXlsx(buf);
+    loadRows(rows, file.name);
+  }catch(err){ console.error(err); setStatus(t('errRead')+err.message); }
+});
+$('demoBtn').addEventListener('click', ()=>{ loadRows(generateDemoRows(2500,100), 'DEMO'); });
+$('templateBtn').addEventListener('click', downloadTemplate);
+$('resetBtn').addEventListener('click', ()=>{ location.reload(); });
+$('analyzeBtn').addEventListener('click', analyze);
+$('applyFiltersBtn').addEventListener('click', applyFilters);
+$('clearFiltersBtn').addEventListener('click', ()=>{ ['searchSku','filterABC','filterXYZ','filterDemand','filterModel','filterMeta','filterMetaValue'].forEach(id=>$(id).value=''); $('metaValueWrap').classList.add('hidden'); applyFilters(); });
+$('filterMeta').addEventListener('change', refreshMetaValues);
+$('searchSku').addEventListener('keydown', e=>{ if(e.key==='Enter') applyFilters(); });
+$('toggleRowsBtn').addEventListener('click', ()=>{ state.topOnly=!state.topOnly; renderDashboard(); });
+$('downloadCsvBtn').addEventListener('click', ()=>downloadCsv(state.filtered));
+$('downloadXlsxBtn').addEventListener('click', ()=>downloadXlsx(state.filtered));
+$('downloadPdfBtn').addEventListener('click', ()=>downloadPdf(state.filtered));
+$('dClose').addEventListener('click', ()=>$('detailModal').classList.add('hidden'));
+$('detailModal').addEventListener('click', e=>{ if(e.target===$('detailModal')) $('detailModal').classList.add('hidden'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('detailModal').classList.add('hidden'); });
+
+function loadRows(rows, name){
+  rows = rows.filter(r => r && r.some(c => c!==null && c!==undefined && String(c).trim()!==''));
+  if(rows.length<2) throw new Error('No data.');
+  state.headers = rows[0].map((h,i)=> String(h??('Col_'+(i+1))).trim() || ('Col_'+(i+1)) );
+  state.rows = rows.slice(1);
+  detectMapping();
+  populateMapping();
+  $('mappingPanel').classList.remove('hidden');
+  setStatus(t('statusLoaded')(name, state.rows.length.toLocaleString(locale()), state.headers.length));
+}
+
+function detectMapping(){
+  const headers=state.headers;
+  const lower=headers.map(normHeader);
+  const skuIdx = lower.findIndex(h=>/^(material|sku|item|part|producto|codigo|código)/.test(h));
+  let ltIdx = lower.findIndex(h=>/^lt$|lead\s*time|manufact|manufactura|tiempo/.test(h));
+  let grIdx = lower.findIndex(h=>/gr\s*processing|transit|tr[aá]nsito|transport|processing/.test(h));
+  if(ltIdx<0) ltIdx = lower.findIndex(h=>h.includes('lt'));
+  if(grIdx<0) grIdx = lower.findIndex(h=>h.includes('gr'));
+  const totalIdx = lower.findIndex(h=>/^total$|grand\s*total|suma/.test(h));
+  const numericRatio = (c)=>{
+    let checked=0, num=0;
+    for(let i=0;i<Math.min(80,state.rows.length);i++){ const v=state.rows[i][c]; if(v!==''&&v!==null&&v!==undefined){ checked++; if(Number.isFinite(safeNum(v))) num++; } }
+    return checked?num/checked:0;
+  };
+  const protectedIdx = new Set([skuIdx,ltIdx,grIdx,totalIdx].filter(i=>i>=0));
+  let first=-1,last=-1;
+  for(let c=0;c<headers.length;c++){
+    if(protectedIdx.has(c)) continue;
+    if(totalIdx>=0 && c>=totalIdx) continue;
+    const h=lower[c];
+    const looksPeriod = /^(w|wk|week|sem|semana|period|periodo|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|ene|abr|ago|dic|\d{4}|\d{1,2}[\/\-])/.test(h) || numericRatio(c)>=0.65;
+    if(looksPeriod){ if(first<0) first=c; last=c; }
+    else if(first>=0 && last>=first) break;
+  }
+  if(first<0){ first=Math.max(skuIdx,ltIdx,grIdx,0)+1; last=(totalIdx>first?totalIdx-1:headers.length-1); }
+  state.mapping={skuIdx:skuIdx>=0?skuIdx:0, ltIdx:ltIdx>=0?ltIdx:1, grIdx:grIdx>=0?grIdx:2, firstIdx:first, lastIdx:last};
+}
+
+function populateMapping(){
+  const opts = state.headers.map((h,i)=>`<option value="${i}">${escapeHtml(colName(i)+' - '+h)}</option>`).join('');
+  ['skuCol','ltCol','grCol','firstPeriodCol','lastPeriodCol'].forEach(id=>$(id).innerHTML=opts);
+  $('skuCol').value=state.mapping.skuIdx; $('ltCol').value=state.mapping.ltIdx; $('grCol').value=state.mapping.grIdx; $('firstPeriodCol').value=state.mapping.firstIdx; $('lastPeriodCol').value=state.mapping.lastIdx;
+}
+
+function currentParams(){
+  return {
+    serviceLevel: clamp(safeNum($('serviceLevel').value)||95,50,99.9),
+    ltUnit: $('ltUnit').value,
+    defaultLT: Math.max(0,safeNum($('defaultLT').value)||0),
+    defaultGR: Math.max(0,safeNum($('defaultGR').value)||0),
+    alpha: clamp(safeNum($('alpha').value)||0.3,0.01,0.99),
+    beta: clamp(safeNum($('beta').value)||0.1,0.01,0.99),
+    gamma: clamp(safeNum($('gamma').value)||0.1,0.01,0.99),
+    maWindow: Math.max(2,Math.round(safeNum($('maWindow').value)||4)),
+    seasonLen: $('seasonLen').value,
+    excludeOutliers: $('excludeOutliers').checked,
+    iqrK: clamp(safeNum($('iqrK').value)||1.5,1,5),
+    skuIdx:+$('skuCol').value, ltIdx:+$('ltCol').value, grIdx:+$('grCol').value,
+    firstIdx:+$('firstPeriodCol').value, lastIdx:+$('lastPeriodCol').value
+  };
+}
+
+function analyze(){
+  if(!state.rows.length) return;
+  const p=currentParams();
+  if(p.lastIdx<p.firstIdx){ alert(t('alertPeriod')); return; }
+  state.periodHeaders = state.headers.slice(p.firstIdx,p.lastIdx+1);
+  setStatus(t('statusAnalyzing'));
+  setTimeout(()=>{
+    const raw=[]; let outlierTotal=0;
+    for(const row of state.rows){
+      const sku=String(row[p.skuIdx]??'').trim(); if(!sku) continue;
+      const demand=[];
+      for(let c=p.firstIdx;c<=p.lastIdx;c++){ const n=safeNum(row[c]); demand.push(Number.isFinite(n)?Math.max(0,n):0); }
+      const meta={};
+      state.headers.forEach((h,i)=>{ if(i<p.firstIdx && ![p.skuIdx,p.ltIdx,p.grIdx].includes(i)) meta[h]=row[i]??''; });
+      const metrics = calcSkuMetrics(sku,row,demand,meta,p);
+      raw.push(metrics); outlierTotal += metrics.outliers;
+    }
+    classifyABC(raw); classifyXYZ(raw);
+    state.results=raw; state.filtered=raw.slice();
+    refreshFilterOptions(); renderDashboard();
+    $('dashboard').classList.remove('hidden');
+    setStatus(t('statusDone')(raw.length.toLocaleString(locale()), outlierTotal.toLocaleString(locale())));
+    $('dashboard').scrollIntoView?.({behavior:'smooth'});
+  },20);
+}
+
+function calcSkuMetrics(sku,row,demand,meta,p){
+  const nonzero=demand.filter(v=>v>0);
+  const q1=quantile(nonzero,0.25), q3=quantile(nonzero,0.75), iqr=Number.isFinite(q3-q1)?(q3-q1):0;
+  const upper=Number.isFinite(q3)?q3 + p.iqrK*iqr:Infinity;
+  const med=Number.isFinite(median(nonzero))?median(nonzero):0;
+  const outlierFlags=demand.map(v=>v>0 && Number.isFinite(upper) && iqr>0 && v>upper);
+  const outliers=outlierFlags.filter(Boolean).length;
+  const metricDemand=demand.map((v,i)=> p.excludeOutliers && outlierFlags[i] ? NaN : v);
+  const modelDemand=demand.map((v,i)=> p.excludeOutliers && outlierFlags[i] ? med : v);
+  const validPeriods=metricDemand.filter(Number.isFinite).length;
+  const nonzeroClean=metricDemand.filter(v=>Number.isFinite(v)&&v>0);
+  const avg=mean(metricDemand), sd=stdev(metricDemand), total=sum(metricDemand);
+  const cv=avg>0?sd/avg:0;
+  const avgNonzero=mean(nonzeroClean), sdNonzero=stdev(nonzeroClean);
+  const cvDemandSize=avgNonzero>0?sdNonzero/avgNonzero:0;
+  const cv2=cvDemandSize*cvDemandSize;
+  const adi=nonzeroClean.length>0?validPeriods/nonzeroClean.length:999;
+  const demandClass = classifyDemand(adi,cv2,avg,nonzeroClean.length);
+  const ltRaw = Number.isFinite(safeNum(row[p.ltIdx])) ? safeNum(row[p.ltIdx]) : p.defaultLT;
+  const grRaw = Number.isFinite(safeNum(row[p.grIdx])) ? safeNum(row[p.grIdx]) : p.defaultGR;
+  const ltWeeks = p.ltUnit==='days' ? Math.max(0,(ltRaw+grRaw)/7) : Math.max(0,ltRaw+grRaw);
+  const z = normInv(p.serviceLevel/100);
+  const basicSS = demandClass==='No demand'?0:z*sd*Math.sqrt(Math.max(ltWeeks,0));
+  const factor = {Smooth:1.00,Intermittent:1.15,Erratic:1.25,Lumpy:1.40,'No demand':0}[demandClass] ?? 1;
+  const advancedSS = Math.max(0,basicSS*factor);
+  const cycleStock = Math.max(0,avg*ltWeeks);
+  const reorderPoint = cycleStock + advancedSS;
+  const forecastObj = chooseForecastModel(modelDemand,demandClass,p);
+  const serviceRisk = riskBand(demandClass,cv,adi,ltWeeks);
+  return {
+    sku, ltRaw, grRaw, ltWeeks, periods:demand.length, demandWeeks:nonzeroClean.length, totalDemand:total, avgWeekly:avg, sdWeekly:sd,
+    cv, cv2, adi, demandClass, abc:'', xyz:'', abcxyz:'', serviceLevel:p.serviceLevel, z, basicSS, advancedSS, reorderPoint,
+    forecastNext:forecastObj.forecast, forecastLT:forecastObj.forecast*Math.max(1,ltWeeks), model:forecastObj.model, modelError:forecastObj.error,
+    outliers, outlierFence:upper, serviceRisk, meta, demand, outlierFlags, maWindow:p.maWindow
+  };
+}
+function recommendation(r){
+  const key={'No demand':'recNoDemand','Smooth':'recSmooth','Intermittent':'recIntermittent','Erratic':'recErratic','Lumpy':'recLumpy'}[r.demandClass];
+  const v=t(key); return typeof v==='function'?v(r.model):v;
+}
+function riskLabel(x){ return {high:t('riskHigh'),med:t('riskMed'),ok:t('riskOk'),none:t('riskNone')}[x]||x; }
+function classifyDemand(adi,cv2,avg,nonzeroCount){ if(avg<=0||nonzeroCount===0) return 'No demand'; if(adi<1.32 && cv2<0.49) return 'Smooth'; if(adi>=1.32 && cv2<0.49) return 'Intermittent'; if(adi<1.32 && cv2>=0.49) return 'Erratic'; return 'Lumpy'; }
+function classifyABC(rows){ const total=rows.reduce((s,r)=>s+Math.max(0,r.avgWeekly),0); let cum=0; rows.slice().sort((a,b)=>b.avgWeekly-a.avgWeekly).forEach(r=>{ cum+=Math.max(0,r.avgWeekly); const pct=total?cum/total:1; r.abc=pct<=0.80?'A':pct<=0.95?'B':'C'; r.abcxyz=r.abc+(r.xyz||''); }); }
+function classifyXYZ(rows){ rows.forEach(r=>{ r.xyz = r.cv<=0.5?'X':r.cv<=1.0?'Y':'Z'; r.abcxyz=(r.abc||'')+r.xyz; }); }
+function riskBand(cls,cv,adi,ltw){ if(cls==='No demand') return 'none'; if(cls==='Lumpy'||cv>1.5||adi>4||ltw>8) return 'high'; if(cls==='Intermittent'||cls==='Erratic'||cv>0.8||adi>2) return 'med'; return 'ok'; }
+
+function chooseForecastModel(series,cls,p){
+  if(cls==='No demand') return {model:'No forecast', forecast:0, error:0};
+  let candidates;
+  if(cls==='Smooth') candidates=['Naive','Moving Average','SES','Holt','Holt-Winters'];
+  else if(cls==='Intermittent') candidates=['Croston','SBA','TSB','Moving Average','Naive'];
+  else if(cls==='Erratic') candidates=['Moving Average','SES','Holt','Naive'];
+  else candidates=['TSB','SBA','Croston','Naive'];
+  const seasonLen = resolveSeasonLen(series.length,p.seasonLen);
+  candidates = candidates.filter(m=> m!=='Holt-Winters' || series.length>=seasonLen*2);
+  let best=null;
+  for(const m of candidates){ const error=backtestError(series,m,p,seasonLen); const forecast=forecastModel(series,m,p,seasonLen); if(Number.isFinite(forecast) && (!best || error<best.error)){ best={model:m,forecast:Math.max(0,forecast),error}; } }
+  return best || {model:'Naive', forecast:Math.max(0,series[series.length-1]||0), error:0};
+}
+function resolveSeasonLen(n,opt){ if(opt!=='auto') return +opt; return n>=104?52:n>=24?12:4; }
+function backtestError(series,model,p,seasonLen){
+  const n=series.length; const hold=Math.min(12,Math.max(4,Math.floor(n*.20))); const start=Math.max(4,n-hold); let abs=0, denom=0, count=0;
+  for(let t=start;t<n;t++){ const train=series.slice(0,t); const pred=forecastModel(train,model,p,seasonLen); const actual=series[t]; if(Number.isFinite(pred)&&Number.isFinite(actual)){ abs+=Math.abs(actual-pred); denom+=Math.abs(actual); count++; } }
+  if(!count) return 999999; return denom>0?abs/denom:abs/count;
+}
+function forecastModel(y,model,p,seasonLen){
+  const a=p.alpha,b=p.beta,g=p.gamma; const n=y.length; if(!n) return 0;
+  if(model==='Naive') return y[n-1]||0;
+  if(model==='Moving Average'){ const w=Math.min(p.maWindow,n); return mean(y.slice(n-w)); }
+  if(model==='SES'){ let level=y[0]||0; for(let i=1;i<n;i++) level=a*y[i]+(1-a)*level; return level; }
+  if(model==='Holt'){ let l=y[0]||0, tr=(y[1]??y[0])-y[0]; for(let i=1;i<n;i++){ const prev=l; l=a*y[i]+(1-a)*(l+tr); tr=b*(l-prev)+(1-b)*tr; } return l+tr; }
+  if(model==='Croston'||model==='SBA') return croston(y,a,model==='SBA');
+  if(model==='TSB') return tsb(y,a);
+  if(model==='Holt-Winters') return holtWintersAdditive(y,seasonLen,a,b,g);
+  return y[n-1]||0;
+}
+function croston(y,a,sba=false){
+  let first=y.findIndex(v=>v>0); if(first<0) return 0; let q=y[first], p=first+1, interval=1, f=q/p;
+  for(let i=first+1;i<y.length;i++){ if(y[i]>0){ q=a*y[i]+(1-a)*q; p=a*interval+(1-a)*p; interval=1; } else interval++; f=p>0?q/p:0; }
+  return sba ? (1-a/2)*f : f;
+}
+function tsb(y,a){ const nz=y.filter(v=>v>0); if(!nz.length) return 0; let prob=nz.length/y.length, size=mean(nz); for(const v of y){ const occ=v>0?1:0; prob=a*occ+(1-a)*prob; if(v>0) size=a*v+(1-a)*size; } return prob*size; }
+function holtWintersAdditive(y,s,a,b,g){ if(y.length<s*2) return NaN; let l=mean(y.slice(0,s)); let tr=(mean(y.slice(s,2*s))-mean(y.slice(0,s)))/s; let seas=[]; for(let i=0;i<s;i++) seas[i]=(y[i]||0)-l; for(let i=s;i<y.length;i++){ const idx=i%s; const prevL=l; l=a*(y[i]-seas[idx])+(1-a)*(l+tr); tr=b*(l-prevL)+(1-b)*tr; seas[idx]=g*(y[i]-l)+(1-g)*seas[idx]; } return Math.max(0,l+tr+seas[y.length%s]); }
+
+function applyFilters(){
+  const q=normHeader($('searchSku').value), abc=$('filterABC').value, xyz=$('filterXYZ').value, d=$('filterDemand').value, m=$('filterModel').value, meta=$('filterMeta').value, mv=$('filterMetaValue').value;
+  state.filtered = state.results.filter(r=>{
+    if(q && !normHeader(r.sku).includes(q) && !Object.values(r.meta).some(v=>normHeader(v).includes(q))) return false;
+    if(abc && r.abc!==abc) return false; if(xyz && r.xyz!==xyz) return false; if(d && r.demandClass!==d) return false; if(m && r.model!==m) return false;
+    if(meta && mv && String(r.meta[meta]??'')!==mv) return false; return true;
+  });
+  renderDashboard();
+}
+function refreshFilterOptions(){
+  const setOpts=(id,vals,first)=>{ $(id).innerHTML=`<option value="">${first}</option>`+[...new Set(vals)].sort().map(v=>`<option>${escapeHtml(v)}</option>`).join(''); };
+  setOpts('filterABC',state.results.map(r=>r.abc),t('all')); setOpts('filterXYZ',state.results.map(r=>r.xyz),t('all')); setOpts('filterDemand',state.results.map(r=>r.demandClass),t('all')); setOpts('filterModel',state.results.map(r=>r.model),t('all'));
+  const metaKeys=[...new Set(state.results.flatMap(r=>Object.keys(r.meta||{})))].filter(k=>k && state.results.some(r=>String(r.meta[k]??'').trim()!==''));
+  $('filterMeta').innerHTML=`<option value="">${t('noFilter')}</option>`+metaKeys.map(k=>`<option>${escapeHtml(k)}</option>`).join('');
+}
+function refreshMetaValues(){ const k=$('filterMeta').value; $('metaValueWrap').classList.toggle('hidden',!k); if(!k) return; const vals=[...new Set(state.results.map(r=>String(r.meta[k]??'')).filter(Boolean))].sort(); $('filterMetaValue').innerHTML=`<option value="">${t('all')}</option>`+vals.map(v=>`<option>${escapeHtml(v)}</option>`).join(''); }
+
+/* ===================== render ===================== */
+const COLS = [
+  {key:'sku',label:'thSku'},{key:'abc',label:'ABC',raw:true},{key:'xyz',label:'XYZ',raw:true},{key:'demandClass',label:'thType'},
+  {key:'avgWeekly',label:'thAvg'},{key:'cv',label:'thCv'},{key:'cv2',label:'thCv2'},{key:'adi',label:'thAdi'},{key:'ltWeeks',label:'thLt'},
+  {key:'advancedSS',label:'thSS'},{key:'reorderPoint',label:'thRop'},{key:'forecastNext',label:'thFc'},{key:'model',label:'thModel'},
+  {key:'modelError',label:'thErr'},{key:'serviceRisk',label:'thRisk'},{key:'outliers',label:'thOutliers'},{key:'rec',label:'thRec'}
+];
+function sortRows(rows){
+  const {key,dir}=state.sort; if(!key||key==='rec') return rows;
+  return rows.slice().sort((a,b)=>{ const av=a[key],bv=b[key]; if(typeof av==='string'||typeof bv==='string') return String(av).localeCompare(String(bv))*dir; return ((av??0)-(bv??0))*dir; });
+}
+function renderDashboard(){
+  const rows=state.filtered; const all=state.results;
+  $('kpiSkus').textContent=fmt0(rows.length); $('kpiSS').textContent=fmt0(rows.reduce((s,r)=>s+r.advancedSS,0));
+  const intCount=rows.filter(r=>['Intermittent','Lumpy'].includes(r.demandClass)).length; $('kpiIntermittent').textContent=rows.length?fmt(intCount/rows.length*100,1)+'%':'0%';
+  $('kpiOutliers').textContent=fmt0(rows.reduce((s,r)=>s+r.outliers,0));
+  $('summaryPills').innerHTML=[
+    t('pillFiltered')(fmt0(rows.length),fmt0(all.length)),
+    t('pillA')(fmt0(rows.filter(r=>r.abc==='A').length)),
+    t('pillHigh')(fmt0(rows.filter(r=>r.serviceRisk==='high').length)),
+    t('pillService')($('serviceLevel').value)
+  ].map(x=>`<span class="badge">${escapeHtml(x)}</span>`).join('');
+  const limit = state.topOnly ? 10 : PERIOD_MAX_TABLE_ROWS;
+  $('toggleRowsBtn').textContent = state.topOnly ? t('btnAll')(fmt0(Math.min(rows.length,PERIOD_MAX_TABLE_ROWS))) : t('btnTop');
+  renderTable(sortRows(rows).slice(0,limit)); renderCharts(rows);
+}
+function renderTable(rows){
+  const {key,dir}=state.sort;
+  const thead='<thead><tr>'+COLS.map(c=>{ const lbl=c.raw?c.label:t(c.label); const arrow=c.key===key?`<span class="arrow">${dir>0?'▲':'▼'}</span>`:''; return `<th data-key="${c.key}">${escapeHtml(lbl)} ${arrow}</th>`; }).join('')+'</tr></thead>';
+  const tbody='<tbody>'+rows.map((r,i)=>`<tr data-sku="${escapeHtml(r.sku)}">
+    <td><strong>${escapeHtml(r.sku)}</strong></td><td><span class="badge ${r.abc==='A'?'good':r.abc==='B'?'warn':'gray'}">${r.abc}</span></td><td>${r.xyz}</td><td>${badgeDemand(r.demandClass)}</td>
+    <td class="num">${fmt(r.avgWeekly)}</td><td class="num">${fmt(r.cv)}</td><td class="num">${fmt(r.cv2)}</td><td class="num">${fmt(r.adi)}</td><td class="num">${fmt(r.ltWeeks)}</td>
+    <td class="num">${fmt(r.advancedSS)}</td><td class="num">${fmt(r.reorderPoint)}</td><td class="num">${fmt(r.forecastNext)}</td><td>${escapeHtml(r.model)}</td><td class="num">${fmt(r.modelError*100,1)}%</td>
+    <td>${badgeRisk(r.serviceRisk)}</td><td class="num">${r.outliers}</td><td class="recommend">${escapeHtml(recommendation(r))}</td></tr>`).join('')+'</tbody>';
+  $('resultsTable').innerHTML=thead+tbody;
+  $('resultsTable').querySelectorAll('th').forEach(th=>th.addEventListener('click',()=>{
+    const k=th.getAttribute('data-key'); if(k==='rec') return;
+    if(state.sort.key===k) state.sort.dir*=-1; else state.sort={key:k,dir:-1};
+    renderDashboard();
+  }));
+  $('resultsTable').querySelectorAll('tbody tr').forEach(tr=>tr.addEventListener('click',()=>{
+    const r=state.results.find(x=>x.sku===tr.getAttribute('data-sku')); if(r) openDetail(r);
+  }));
+}
+function badgeDemand(x){ const cls=x==='Smooth'?'good':x==='Erratic'?'warn':x==='Lumpy'?'bad':x==='Intermittent'?'':'gray'; return `<span class="badge ${cls}">${escapeHtml(x)}</span>`; }
+function badgeRisk(x){ const cls=x==='ok'?'good':x==='med'?'warn':x==='high'?'bad':'gray'; return `<span class="badge ${cls}">${escapeHtml(riskLabel(x))}</span>`; }
+
+/* ===================== SKU detail ===================== */
+function openDetail(r){
+  $('dTitle').textContent=r.sku;
+  const metaTxt=Object.entries(r.meta||{}).filter(([k,v])=>String(v).trim()).map(([k,v])=>`${k}: ${v}`).join(' · ');
+  $('dSub').textContent=`${r.demandClass} · ABC ${r.abc}${r.xyz} · ${metaTxt}`;
+  $('dStats').innerHTML=[
+    [t('dAvg'),fmt(r.avgWeekly)],[t('dSS'),fmt0(r.advancedSS)],[t('dRop'),fmt0(r.reorderPoint)],[t('dFc'),fmt(r.forecastNext)]
+  ].map(([l,v])=>`<div class="dstat"><div class="l">${escapeHtml(l)}</div><div class="v">${v}</div></div>`).join('');
+  $('dRec').textContent=recommendation(r)+` — ${t('thModel')}: ${r.model} (WMAPE ${fmt(r.modelError*100,1)}%)`;
+  $('dLegend').innerHTML=[
+    [css('--brand2'),t('legActual')],[css('--warn'),t('legMA')],[css('--bad'),t('legOut')],[css('--ok'),t('legFc')]
+  ].map(([c,l])=>`<span><span class="dot" style="background:${c}"></span>${escapeHtml(l)}</span>`).join('');
+  drawDetailChart($('detailChart'), r);
+  $('detailModal').classList.remove('hidden');
+}
+function drawDetailChart(svg,r){
+  svgClear(svg);
+  const W=svg.clientWidth||800,H=280,padL=48,padR=20,padT=12,padB=30;
+  const y=r.demand, n=y.length; if(!n) return;
+  const maxY=Math.max(1,...y, r.forecastNext)*1.08;
+  const xs=i=>padL+(W-padL-padR)*i/Math.max(1,n); const ys=v=>H-padB-(H-padT-padB)*v/maxY;
+  for(let g=0;g<=4;g++){ const gy=padT+(H-padT-padB)*g/4; svg.appendChild(node('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,stroke:css('--axis'),'stroke-width':.6})); svg.appendChild(node('text',{x:padL-6,y:gy+3,'text-anchor':'end','font-size':9,fill:css('--axislabel')})).textContent=fmt0(maxY*(1-g/4)); }
+  // bars
+  const bw=Math.max(1,(W-padL-padR)/n-1);
+  y.forEach((v,i)=>{ if(v<=0) return; svg.appendChild(node('rect',{x:xs(i),y:ys(v),width:bw,height:H-padB-ys(v),fill:r.outlierFlags[i]?css('--bad'):css('--brand2'),opacity:r.outlierFlags[i]?.95:.65,rx:1})); });
+  // moving average line
+  const w=r.maWindow||4; let d='';
+  for(let i=0;i<n;i++){ const seg=y.slice(Math.max(0,i-w+1),i+1); const m=mean(seg); d+=(i?'L':'M')+(xs(i)+bw/2).toFixed(1)+' '+ys(m).toFixed(1)+' '; }
+  svg.appendChild(node('path',{d,fill:'none',stroke:css('--warn'),'stroke-width':2}));
+  // forecast marker
+  const fx=xs(n-1)+bw+14, fy=ys(r.forecastNext);
+  svg.appendChild(node('line',{x1:xs(n-1)+bw/2,y1:ys(y[n-1]||0),x2:fx,y2:fy,stroke:css('--ok'),'stroke-width':2,'stroke-dasharray':'5 4'}));
+  svg.appendChild(node('circle',{cx:fx,cy:fy,r:5,fill:css('--ok')}));
+  svg.appendChild(node('text',{x:W/2,y:H-6,'text-anchor':'middle','font-size':10,fill:css('--axislabel')})).textContent=t('axPeriods');
+}
+
+/* ===================== charts ===================== */
+function renderCharts(rows){
+  drawScatter($('scatterChart'), rows);
+  drawWeekly($('weeklyChart'), rows);
+  drawMatrix($('matrixChart'), rows);
+  drawBarChart($('demandChart'), countBy(rows,'demandClass'));
+  drawHorizontalBar($('topSSChart'), rows.slice().sort((a,b)=>b.advancedSS-a.advancedSS).slice(0,15).map(r=>({label:r.sku,value:r.advancedSS})));
+  drawBarChart($('modelChart'), countBy(rows,'model'));
+}
+function countBy(rows,key){ const m={}; rows.forEach(r=>{ const k=r[key]||''; m[k]=(m[k]||0)+1; }); return Object.entries(m).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value); }
+function svgClear(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+function node(name,attrs){ const el=document.createElementNS('http://www.w3.org/2000/svg',name); for(const [k,v] of Object.entries(attrs||{})) el.setAttribute(k,v); return el; }
+function classColor(cls){ return cls==='Smooth'?css('--ok'):cls==='Intermittent'?css('--brand2'):cls==='Erratic'?css('--warn'):cls==='Lumpy'?css('--bad'):css('--axislabel'); }
+function drawBarChart(svg,data){ svgClear(svg); const W=svg.clientWidth||600,H=230,pad=36; const max=Math.max(1,...data.map(d=>d.value)); const bw=(W-pad*2)/Math.max(1,data.length); svg.appendChild(node('line',{x1:pad,y1:H-pad,x2:W-pad,y2:H-pad,stroke:css('--axis')})); data.forEach((d,i)=>{ const h=(H-pad*2)*d.value/max; const x=pad+i*bw+5,y=H-pad-h; const fill=classColor(d.label)!==css('--axislabel')&&['Smooth','Intermittent','Erratic','Lumpy','No demand'].includes(d.label)?classColor(d.label):css('--brand2'); svg.appendChild(node('rect',{x,y,width:Math.max(10,bw-10),height:h,rx:5,fill})); svg.appendChild(node('text',{x:x+(bw-10)/2,y:y-5,'text-anchor':'middle','font-size':11,fill:css('--ink'),'font-weight':700})).textContent=d.value; svg.appendChild(node('text',{x:x+(bw-10)/2,y:H-12,'text-anchor':'middle','font-size':10,fill:css('--axislabel')})).textContent=String(d.label).slice(0,14); }); }
+function drawHorizontalBar(svg,data){ svgClear(svg); const W=svg.clientWidth||600,H=230,padL=110,padR=44,rowH=Math.max(12,(H-18)/Math.max(1,data.length)); const max=Math.max(1,...data.map(d=>d.value)); data.forEach((d,i)=>{ const y=10+i*rowH; const w=(W-padL-padR)*d.value/max; svg.appendChild(node('text',{x:6,y:y+rowH*.65,'font-size':10,fill:css('--axislabel')})).textContent=String(d.label).slice(0,17); svg.appendChild(node('rect',{x:padL,y:y+2,width:w,height:Math.max(6,rowH-5),rx:4,fill:css('--brand2')})); svg.appendChild(node('text',{x:padL+w+4,y:y+rowH*.65,'font-size':10,fill:css('--ink')})).textContent=fmt0(d.value); }); }
+function drawScatter(svg,rows){
+  svgClear(svg); const W=svg.clientWidth||600,H=230,padL=44,padR=14,padT=22,padB=32;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const maxX=5,maxY=2.5;
+  // sqrt scales spread the dense low-value region
+  const xScale=a=>padL+Math.sqrt(clamp((a-1)/(maxX-1),0,1))*plotW;
+  const yScale=c=>H-padB-Math.sqrt(clamp(c/maxY,0,1))*plotH;
+  const tx=xScale(1.32), ty=yScale(0.49);
+  // quadrant tints
+  const quad=(x,y,w,h,color,label)=>{
+    svg.appendChild(node('rect',{x,y,width:w,height:h,fill:color,opacity:theme==='dark'?.14:.10}));
+    svg.appendChild(node('text',{x:x+w-6,y:y+13,'text-anchor':'end','font-size':10,'font-weight':800,fill:color,opacity:.9})).textContent=label;
+  };
+  quad(padL,ty,tx-padL,H-padB-ty,css('--ok'),'Smooth');
+  quad(tx,ty,W-padR-tx,H-padB-ty,css('--brand2'),'Intermittent');
+  quad(padL,padT,tx-padL,ty-padT,css('--warn'),'Erratic');
+  quad(tx,padT,W-padR-tx,ty-padT,css('--bad'),'Lumpy');
+  svg.appendChild(node('rect',{x:padL,y:padT,width:plotW,height:plotH,fill:'none',stroke:css('--axis')}));
+  svg.appendChild(node('line',{x1:tx,y1:padT,x2:tx,y2:H-padB,stroke:css('--warn'),'stroke-dasharray':'4 4'}));
+  svg.appendChild(node('line',{x1:padL,y1:ty,x2:W-padR,y2:ty,stroke:css('--warn'),'stroke-dasharray':'4 4'}));
+  // axis ticks
+  [1,1.32,2,3,5].forEach(v=>{ svg.appendChild(node('text',{x:xScale(v),y:H-padB+12,'text-anchor':'middle','font-size':9,fill:css('--axislabel')})).textContent=v; });
+  [0,0.49,1,2.5].forEach(v=>{ svg.appendChild(node('text',{x:padL-5,y:yScale(v)+3,'text-anchor':'end','font-size':9,fill:css('--axislabel')})).textContent=v; });
+  const sample = rows.length>1200 ? rows.filter((_,i)=>i%Math.ceil(rows.length/1200)===0) : rows;
+  sample.forEach((r,i)=>{
+    const jx=((i*37)%11-5)*.7, jy=((i*53)%11-5)*.7; // deterministic jitter
+    svg.appendChild(node('circle',{cx:clamp(xScale(r.adi)+jx,padL+3,W-padR-3),cy:clamp(yScale(r.cv2)+jy,padT+3,H-padB-3),r:3,fill:classColor(r.demandClass),opacity:.7}));
+  });
+  svg.appendChild(node('text',{x:padL+plotW/2,y:H-4,'font-size':10,'text-anchor':'middle',fill:css('--axislabel')})).textContent=t('adiAxis');
+  svg.appendChild(node('text',{x:6,y:14,'font-size':10,fill:css('--axislabel')})).textContent='CV²';
+}
+function drawWeekly(svg,rows){
+  svgClear(svg); if(!rows.length) return;
+  const n=Math.max(...rows.map(r=>r.demand.length)); const tot=new Array(n).fill(0);
+  rows.forEach(r=>r.demand.forEach((v,i)=>tot[i]+=v));
+  const W=svg.clientWidth||600,H=230,padL=52,padR=14,padT=12,padB=30;
+  const maxY=Math.max(1,...tot)*1.06;
+  const xs=i=>padL+(W-padL-padR)*i/Math.max(1,n-1); const ys=v=>H-padB-(H-padT-padB)*v/maxY;
+  for(let g=0;g<=4;g++){ const gy=padT+(H-padT-padB)*g/4; svg.appendChild(node('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,stroke:css('--axis'),'stroke-width':.6})); svg.appendChild(node('text',{x:padL-6,y:gy+3,'text-anchor':'end','font-size':9,fill:css('--axislabel')})).textContent=fmt0(maxY*(1-g/4)); }
+  let area='M'+xs(0)+' '+ys(tot[0]), line='M'+xs(0)+' '+ys(tot[0]);
+  for(let i=1;i<n;i++){ const p=xs(i)+' '+ys(tot[i]); area+='L'+p; line+='L'+p; }
+  area+='L'+xs(n-1)+' '+(H-padB)+'L'+xs(0)+' '+(H-padB)+'Z';
+  svg.appendChild(node('path',{d:area,fill:css('--brand2'),opacity:.15}));
+  svg.appendChild(node('path',{d:line,fill:'none',stroke:css('--brand2'),'stroke-width':2}));
+  svg.appendChild(node('text',{x:W/2,y:H-6,'text-anchor':'middle','font-size':10,fill:css('--axislabel')})).textContent=t('axPeriods');
+}
+function drawMatrix(svg,rows){
+  svgClear(svg); const W=svg.clientWidth||600,H=230,padL=60,padT=26,padB=16,padR=16;
+  const cw=(W-padL-padR)/3, ch=(H-padT-padB)/3;
+  const abcArr=['A','B','C'], xyzArr=['X','Y','Z'];
+  const counts={}; let max=1;
+  rows.forEach(r=>{ const k=r.abc+r.xyz; counts[k]=(counts[k]||0)+1; max=Math.max(max,counts[k]); });
+  const dark = theme==='dark';
+  abcArr.forEach((a,i)=>{ svg.appendChild(node('text',{x:padL-10,y:padT+i*ch+ch/2+4,'text-anchor':'end','font-size':12,'font-weight':800,fill:css('--brand')})).textContent=a; });
+  xyzArr.forEach((x,j)=>{ svg.appendChild(node('text',{x:padL+j*cw+cw/2,y:padT-8,'text-anchor':'middle','font-size':12,'font-weight':800,fill:css('--brand')})).textContent=x; });
+  abcArr.forEach((a,i)=>xyzArr.forEach((x,j)=>{
+    const v=counts[a+x]||0; const inten=v/max;
+    const base=dark?[77,141,255]:[45,108,223];
+    const bg=`rgba(${base[0]},${base[1]},${base[2]},${(0.08+inten*0.85).toFixed(2)})`;
+    svg.appendChild(node('rect',{x:padL+j*cw+2,y:padT+i*ch+2,width:cw-4,height:ch-4,rx:8,fill:bg,stroke:css('--axis')}));
+    const txtColor = inten>0.55 ? '#ffffff' : css('--ink');
+    svg.appendChild(node('text',{x:padL+j*cw+cw/2,y:padT+i*ch+ch/2+5,'text-anchor':'middle','font-size':14,'font-weight':900,fill:txtColor})).textContent=fmt0(v);
+  }));
+}
+
+/* ===================== CSV / XLSX parsing ===================== */
+function parseCsv(text){
+  const rows=[]; let row=[], cell='', q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i], nx=text[i+1]; if(q){ if(ch==='"'&&nx==='"'){cell+='"';i++;} else if(ch==='"') q=false; else cell+=ch; } else { if(ch==='"') q=true; else if(ch===','){ row.push(cell); cell=''; } else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; } else if(ch==='\r'){} else cell+=ch; } }
+  row.push(cell); rows.push(row); return rows;
+}
+async function parseXlsx(buf){
+  const files=await unzipXlsx(buf);
+  const txt=path=>files[path] || files[path.replace(/^\//,'')];
+  const workbook=txt('xl/workbook.xml'); if(!workbook) throw new Error('xl/workbook.xml not found');
+  const rels=txt('xl/_rels/workbook.xml.rels')||'';
+  const parser=new DOMParser(); const wbDoc=parser.parseFromString(workbook,'application/xml'); const firstSheet=wbDoc.querySelector('sheet'); if(!firstSheet) throw new Error('No sheet in workbook.');
+  const rid=firstSheet.getAttribute('r:id'); let target='worksheets/sheet1.xml';
+  if(rid && rels){ const relDoc=parser.parseFromString(rels,'application/xml'); const rel=[...relDoc.querySelectorAll('Relationship')].find(x=>x.getAttribute('Id')===rid); if(rel) target=rel.getAttribute('Target'); }
+  let sheetPath='xl/'+target.replace(/^\//,''); sheetPath=sheetPath.replace('xl/xl/','xl/');
+  const shared=parseSharedStrings(txt('xl/sharedStrings.xml')||''); const sheet=txt(sheetPath); if(!sheet) throw new Error('First sheet not found: '+sheetPath);
+  return parseSheetXml(sheet,shared);
+}
+function parseSharedStrings(xml){ if(!xml) return []; const doc=new DOMParser().parseFromString(xml,'application/xml'); return [...doc.querySelectorAll('si')].map(si=>[...si.querySelectorAll('t')].map(t=>t.textContent).join('')); }
+function parseSheetXml(xml,shared){
+  const doc=new DOMParser().parseFromString(xml,'application/xml'); const rows=[];
+  doc.querySelectorAll('sheetData row').forEach(r=>{ const rIndex=(+r.getAttribute('r')||rows.length+1)-1; if(!rows[rIndex]) rows[rIndex]=[]; r.querySelectorAll('c').forEach(c=>{ const ref=c.getAttribute('r')||''; const col=refToCol(ref); const t=c.getAttribute('t'); let val=''; if(t==='inlineStr') val=[...c.querySelectorAll('is t')].map(x=>x.textContent).join(''); else { const v=c.querySelector('v'); val=v?v.textContent:''; if(t==='s') val=shared[+val]??''; else if(val!=='' && Number.isFinite(Number(val))) val=Number(val); } rows[rIndex][col]=val; }); });
+  const width=Math.max(...rows.map(r=>r?r.length:0)); return rows.map(r=>Array.from({length:width},(_,i)=>r?.[i]??''));
+}
+function refToCol(ref){ const letters=(ref.match(/[A-Z]+/i)||['A'])[0].toUpperCase(); let n=0; for(const ch of letters){ n=n*26+(ch.charCodeAt(0)-64); } return n-1; }
+async function unzipXlsx(buf){
+  if(!('DecompressionStream' in window)) throw new Error('DecompressionStream not supported. Use an updated Chrome or Edge.');
+  const bytes=new Uint8Array(buf), dv=new DataView(buf); let eocd=-1;
+  for(let i=bytes.length-22;i>=Math.max(0,bytes.length-66000);i--){ if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
+  if(eocd<0) throw new Error('Invalid ZIP.'); const entries=dv.getUint16(eocd+10,true); const cdOffset=dv.getUint32(eocd+16,true); let ptr=cdOffset; const out={};
+  for(let e=0;e<entries;e++){
+    if(dv.getUint32(ptr,true)!==0x02014b50) throw new Error('Invalid central directory.');
+    const method=dv.getUint16(ptr+10,true), compSize=dv.getUint32(ptr+20,true), nameLen=dv.getUint16(ptr+28,true), extraLen=dv.getUint16(ptr+30,true), commentLen=dv.getUint16(ptr+32,true), localOff=dv.getUint32(ptr+42,true);
+    const name=new TextDecoder().decode(bytes.slice(ptr+46,ptr+46+nameLen)); ptr += 46+nameLen+extraLen+commentLen;
+    if(name.endsWith('/')) continue; const nameClean=name.replace(/^\//,'');
+    if(!/^(xl\/|\[Content_Types\]|_rels\/)/.test(nameClean)) continue;
+    const lNameLen=dv.getUint16(localOff+26,true), lExtra=dv.getUint16(localOff+28,true); const dataStart=localOff+30+lNameLen+lExtra; const comp=bytes.slice(dataStart,dataStart+compSize);
+    let data;
+    if(method===0) data=comp;
+    else if(method===8) data=await inflateRaw(comp);
+    else continue;
+    out[nameClean]=new TextDecoder().decode(data);
+  }
+  return out;
+}
+async function inflateRaw(data){ const ds=new DecompressionStream('deflate-raw'); const stream=new Blob([data]).stream().pipeThrough(ds); const ab=await new Response(stream).arrayBuffer(); return new Uint8Array(ab); }
+
+/* ===================== demo data ===================== */
+function generateDemoRows(numSkus, periods){
+  const headers=['Material','Descripcion','Family','Plant','LT','GR processing']; for(let i=1;i<=periods;i++) headers.push('W'+String(i).padStart(3,'0')); headers.push('Total');
+  const families=[
+    {name:'Bebidas',    products:['Agua Mineral','Refresco Cola','Jugo Naranja','Té Helado','Energizante'], base:[90,260], amp:.45, phase:26},
+    {name:'Lácteos',    products:['Leche Entera','Yogurt Natural','Queso Panela','Crema Ácida','Mantequilla'], base:[60,180], amp:.15, phase:0},
+    {name:'Snacks',     products:['Papas Sal','Cacahuate Japonés','Barras Granola','Galletas Choco','Palomitas'], base:[40,150], amp:.30, phase:44},
+    {name:'Cuidado Personal',products:['Shampoo Herbal','Jabón Neutro','Crema Corporal','Pasta Dental','Desodorante'], base:[25,110], amp:.12, phase:10},
+    {name:'Limpieza',   products:['Detergente Polvo','Cloro','Limpiador Multiusos','Suavizante','Aromatizante'], base:[30,120], amp:.22, phase:35},
+    {name:'Refacciones',products:['Filtro Aceite','Balata Delantera','Bujía Iridium','Banda Distribución','Amortiguador'], base:[3,28], amp:.08, phase:0}
+  ];
+  const sizes=['250ml','500ml','1L','2L','Chico','Mediano','Grande','Familiar','x12','x24'];
+  const plants=['MTY','QRO','SLP','GDL'];
+  const rows=[headers]; let seed=17; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  for(let i=1;i<=numSkus;i++){
+    const f=families[i%families.length];
+    const type=i%11===0?'lumpy':i%7===0?'intermittent':i%5===0?'erratic':'smooth';
+    const lt=Math.round(7+rnd()*45), gr=Math.round(2+rnd()*12);
+    const base=f.base[0]+rnd()*(f.base[1]-f.base[0]);
+    const trend=(rnd()-.38)*.9/periods;           // some growing, some declining
+    const promoEvery=Math.round(10+rnd()*16);     // periodic promo lift
+    const desc=f.products[Math.floor(rnd()*f.products.length)]+' '+sizes[Math.floor(rnd()*sizes.length)];
+    // per-SKU dispersion knobs: occasional zero weeks and noise amplitude vary by SKU
+    const zeroP = type==='smooth' ? rnd()*rnd()*.19 : type==='erratic' ? rnd()*rnd()*.23 : 0;
+    const noiseA = .10+rnd()*.55;                 // smooth noise amplitude varies per SKU
+    const sizeA = .15+rnd()*.65;                  // intermittent demand-size variability per SKU
+    const hitP = type==='intermittent' ? .22+rnd()*.38 : .16+rnd()*.28; // demand frequency varies
+    const vals=[];
+    for(let w=0;w<periods;w++){
+      const season=1+f.amp*Math.sin(2*Math.PI*(w+f.phase)/52);
+      const growth=1+trend*w;
+      const promo=(w%promoEvery===promoEvery-1 && rnd()<.7)?1.5+rnd():1;
+      let v=0;
+      if(type==='smooth') v=(rnd()<zeroP)?0:base*season*growth*promo*(1-noiseA+rnd()*2*noiseA);
+      else if(type==='erratic') v=(rnd()<zeroP)?0:base*season*growth*(rnd()<.28 ? 2.2+rnd()*4.5 : .12+rnd()*.75);
+      else if(type==='intermittent') v=rnd()<hitP?base*season*(1-sizeA+rnd()*2*sizeA):0;
+      else v=rnd()<hitP?base*(rnd()<.35 ? 3+rnd()*7 : .25+rnd()*.9):0;
+      if(rnd()<.012) v*=4.2;                       // rare outlier spike
+      vals.push(Math.round(Math.max(0,v)));
+    }
+    rows.push(['SKU-'+String(i).padStart(5,'0'),desc,f.name,plants[i%plants.length],lt,gr,...vals,vals.reduce((a,b)=>a+b,0)]);
+  }
+  return rows;
+}
+
+/* ===================== template ===================== */
+function downloadTemplate(){
+  const periods=52;
+  const headers=['Material','Descripcion','Family','Plant','LT','GR processing']; for(let i=1;i<=periods;i++) headers.push('W'+String(i).padStart(3,'0'));
+  const sample=generateDemoRows(20,periods);
+  const dataRows=[headers, ...sample.slice(1).map(r=>r.slice(0,headers.length))];
+  const instr = lang==='es' ? [
+    ['SKU Forecast & Safety Stock Analyzer — Template de carga'],
+    [''],
+    ['Instrucciones:'],
+    ['1. Llena la hoja "'+t('tplData')+'" con una fila por SKU.'],
+    ['2. Columnas obligatorias: Material (código de SKU), LT (lead time de manufactura) y GR processing (tránsito/recepción).'],
+    ['3. Las columnas W001, W002... son los periodos de consumo (semanas, meses o periodos genéricos). Deben ser numéricas y contiguas.'],
+    ['4. Puedes agregar columnas de metadata (Descripción, Familia, Planta, etc.) antes de los periodos; la app las usará como filtros.'],
+    ['5. Puedes agregar o quitar columnas de periodos según tu historia disponible (mínimo recomendado: 24).'],
+    ['6. Guarda como .xlsx o .csv y súbelo en la sección "1. Carga de archivo".'],
+    ['7. Las 20 filas incluidas son EJEMPLO: bórralas y reemplázalas con tus datos.'],
+    [''],
+    ['Autor: Jesús Vázquez — https://www.linkedin.com/in/jvazquezh/']
+  ] : [
+    ['SKU Forecast & Safety Stock Analyzer — Upload template'],
+    [''],
+    ['Instructions:'],
+    ['1. Fill the "'+t('tplData')+'" sheet with one row per SKU.'],
+    ['2. Required columns: Material (SKU code), LT (manufacturing lead time) and GR processing (transit/receiving).'],
+    ['3. Columns W001, W002... are consumption periods (weeks, months or generic periods). They must be numeric and contiguous.'],
+    ['4. You may add metadata columns (Description, Family, Plant, etc.) before the periods; the app will use them as filters.'],
+    ['5. Add or remove period columns depending on your available history (recommended minimum: 24).'],
+    ['6. Save as .xlsx or .csv and upload it in section "1. File upload".'],
+    ['7. The 20 included rows are SAMPLE data: delete them and replace with your own.'],
+    [''],
+    ['Author: Jesús Vázquez — https://www.linkedin.com/in/jvazquezh/']
+  ];
+  const blob=createXlsx([{name:t('tplInstr'),rows:instr},{name:t('tplData'),rows:dataRows}]);
+  downloadBlob(blob, t('tplName'));
+}
+
+/* ===================== downloads ===================== */
+const EXPORT_HEADERS={
+ es:['SKU','LT manufactura','GR processing','LT total semanas','Periodos','Periodos con demanda','Demanda total','Demanda promedio','Desv est','CV','CV2','ADI','ABC','XYZ','ABCXYZ','Clase demanda','Nivel servicio','Z','Safety stock basico','Safety stock avanzado','Punto reorden','Forecast siguiente periodo','Forecast durante LT','Modelo recomendado','Error WMAPE','Outliers','Riesgo servicio','Recomendacion'],
+ en:['SKU','Manufacturing LT','GR processing','Total LT weeks','Periods','Periods with demand','Total demand','Average demand','Std dev','CV','CV2','ADI','ABC','XYZ','ABCXYZ','Demand class','Service level','Z','Basic safety stock','Advanced safety stock','Reorder point','Next period forecast','Forecast over LT','Recommended model','WMAPE error','Outliers','Service risk','Recommendation']
+};
+function resultRows(rows){
+  const baseHeaders=EXPORT_HEADERS[lang];
+  const metaKeys=[...new Set(rows.flatMap(r=>Object.keys(r.meta||{})))];
+  const data=rows.map(r=>[r.sku,r.ltRaw,r.grRaw,r.ltWeeks,r.periods,r.demandWeeks,r.totalDemand,r.avgWeekly,r.sdWeekly,r.cv,r.cv2,r.adi,r.abc,r.xyz,r.abcxyz,r.demandClass,r.serviceLevel,r.z,r.basicSS,r.advancedSS,r.reorderPoint,r.forecastNext,r.forecastLT,r.model,r.modelError,r.outliers,riskLabel(r.serviceRisk),recommendation(r),...metaKeys.map(k=>r.meta[k]??'')]);
+  return {headers:[...baseHeaders,...metaKeys], data};
+}
+function downloadCsv(rows){ const rr=resultRows(rows); const csv=[rr.headers,...rr.data].map(r=>r.map(csvCell).join(',')).join('\r\n'); downloadBlob(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),'sku_analysis_results.csv'); }
+function csvCell(v){ const s=String(v??''); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000); }
+function downloadXlsx(rows){
+  const rr=resultRows(rows);
+  const L= lang==='es'
+   ? {i:'Indicador',v:'Valor',s:'SKUs analizados',ss:'Safety stock total',il:'SKUs intermitentes/lumpy',o:'Outliers detectados',sl:'Nivel de servicio',f:'Fecha de generación',sum:'Resumen',res:'Resultados'}
+   : {i:'Indicator',v:'Value',s:'SKUs analyzed',ss:'Total safety stock',il:'Intermittent/lumpy SKUs',o:'Outliers detected',sl:'Service level',f:'Generated on',sum:'Summary',res:'Results'};
+  const summary=[[L.i,L.v],[L.s,rows.length],[L.ss,rows.reduce((s,r)=>s+r.advancedSS,0)],[L.il,rows.filter(r=>['Intermittent','Lumpy'].includes(r.demandClass)).length],[L.o,rows.reduce((s,r)=>s+r.outliers,0)],[L.sl,$('serviceLevel').value+'%'],[L.f,new Date().toLocaleString(locale())],['','Jesús Vázquez — linkedin.com/in/jvazquezh']];
+  const blob=createXlsx([{name:L.sum,rows:summary},{name:L.res,rows:[rr.headers,...rr.data]}]); downloadBlob(blob,'sku_forecast_safety_stock_results.xlsx');
+}
+function createXlsx(sheets){
+  const files={};
+  files['[Content_Types].xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>';
+  files['_rels/.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  files['xl/workbook.xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>`<sheet name="${xmlEsc(s.name.slice(0,31))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+'</sheets></workbook>';
+  files['xl/_rels/workbook.xml.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+'</Relationships>';
+  sheets.forEach((s,i)=>{ files[`xl/worksheets/sheet${i+1}.xml`]=sheetXml(s.rows); });
+  return zipStore(files);
+}
+function sheetXml(rows){ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+rows.map((r,ri)=>`<row r="${ri+1}">`+r.map((v,ci)=>cellXml(v,ri+1,ci)).join('')+'</row>').join('')+'</sheetData></worksheet>'; }
+function cellXml(v,row,ci){ const ref=colName(ci)+row; if(typeof v==='number'&&Number.isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`; return `<c r="${ref}" t="inlineStr"><is><t>${xmlEsc(String(v??''))}</t></is></c>`; }
+function xmlEsc(s){ return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[ch])); }
+function zipStore(files){
+  const enc=new TextEncoder(); const localParts=[], centralParts=[]; let offset=0;
+  for(const [name,content] of Object.entries(files)){ const nameB=enc.encode(name), data=enc.encode(content), crc=crc32(data); const local=new Uint8Array(30+nameB.length); const ldv=new DataView(local.buffer); ldv.setUint32(0,0x04034b50,true); ldv.setUint16(4,20,true); ldv.setUint16(8,0,true); ldv.setUint32(14,crc,true); ldv.setUint32(18,data.length,true); ldv.setUint32(22,data.length,true); ldv.setUint16(26,nameB.length,true); local.set(nameB,30); localParts.push(local,data);
+    const cent=new Uint8Array(46+nameB.length); const cdv=new DataView(cent.buffer); cdv.setUint32(0,0x02014b50,true); cdv.setUint16(4,20,true); cdv.setUint16(6,20,true); cdv.setUint16(10,0,true); cdv.setUint32(16,crc,true); cdv.setUint32(20,data.length,true); cdv.setUint32(24,data.length,true); cdv.setUint16(28,nameB.length,true); cdv.setUint32(42,offset,true); cent.set(nameB,46); centralParts.push(cent); offset += local.length+data.length; }
+  const centralSize=centralParts.reduce((s,p)=>s+p.length,0); const eocd=new Uint8Array(22); const edv=new DataView(eocd.buffer); edv.setUint32(0,0x06054b50,true); edv.setUint16(8,Object.keys(files).length,true); edv.setUint16(10,Object.keys(files).length,true); edv.setUint32(12,centralSize,true); edv.setUint32(16,offset,true); return new Blob([...localParts,...centralParts,eocd],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function crc32(data){ let c=~0; for(let i=0;i<data.length;i++){ c^=data[i]; for(let k=0;k<8;k++) c=(c>>>1) ^ (0xEDB88320 & -(c&1)); } return (~c)>>>0; }
+
+function downloadPdf(rows){
+  const top=rows.slice().sort((a,b)=>b.advancedSS-a.advancedSS).slice(0,12);
+  const lines=[]; lines.push(t('pdfTitle')); lines.push(t('pdfDate')+new Date().toLocaleString(locale())); lines.push(t('pdfSkus')+rows.length); lines.push(t('pdfSS')+fmt0(rows.reduce((s,r)=>s+r.advancedSS,0))); lines.push(t('pdfInt')+fmt0(rows.filter(r=>['Intermittent','Lumpy'].includes(r.demandClass)).length)); lines.push(t('pdfOut')+fmt0(rows.reduce((s,r)=>s+r.outliers,0))); lines.push(''); lines.push(t('pdfTop')); top.forEach((r,i)=>lines.push(`${i+1}. ${r.sku} | SS ${fmt0(r.advancedSS)} | ${r.demandClass} | ${r.model}`)); lines.push(''); lines.push(t('pdfRec')); lines.push(''); lines.push('(c) Jesus Vazquez - linkedin.com/in/jvazquezh');
+  const pdf=makeSimplePdf(lines.map(ascii)); downloadBlob(new Blob([pdf],{type:'application/pdf'}),'sku_executive_report.pdf');
+}
+function ascii(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\x20-\x7E]/g,''); }
+function pdfEsc(s){ return s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function makeSimplePdf(lines){
+  let y=800; let content='BT /F1 16 Tf 50 '+y+' Td ('+pdfEsc(lines[0]||'Report')+') Tj ET\n'; y-=28;
+  for(let i=1;i<lines.length;i++){ const size=i<7?11:10; content+=`BT /F1 ${size} Tf 50 ${y} Td (${pdfEsc(lines[i].slice(0,105))}) Tj ET\n`; y-=18; if(y<50) break; }
+  const objs=[]; objs.push('<< /Type /Catalog /Pages 2 0 R >>'); objs.push('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'); objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>'); objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'); objs.push('<< /Length '+content.length+' >>\nstream\n'+content+'endstream');
+  let pdf='%PDF-1.4\n', xref=[]; objs.forEach((o,i)=>{ xref[i+1]=pdf.length; pdf+=(i+1)+' 0 obj\n'+o+'\nendobj\n'; }); const start=pdf.length; pdf+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n'; for(let i=1;i<=objs.length;i++) pdf+=String(xref[i]).padStart(10,'0')+' 00000 n \n'; pdf+='trailer << /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF'; return pdf;
+}
+
+/* init */
+applyTheme(); applyLang();
+window.addEventListener('resize', ()=>{ if(state.results.length) renderCharts(state.filtered); });
+</script>
+</body>
+</html>
