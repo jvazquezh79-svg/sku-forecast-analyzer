@@ -104,10 +104,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}tr:hover td{background
         <div><label data-i18n="lblGamma"></label><input id="gamma" type="number" min="0.01" max="0.99" step="0.01" value="0.10" /></div>
         <div><label data-i18n="lblSeason"></label><select id="seasonLen"><option value="auto" data-i18n="auto"></option><option value="12">12</option><option value="52">52</option><option value="4">4</option></select></div>
       </div>
-      <div class="grid cols-3">
+      <div class="grid cols-4">
         <div class="toggleline"><input id="excludeOutliers" type="checkbox" checked /><span class="small"><strong data-i18n="exclOut"></strong> <span data-i18n="exclOut2"></span></span></div>
         <div><label data-i18n="lblIqr"></label><input id="iqrK" type="number" min="1" max="5" step="0.1" value="1.5" /></div>
         <div><label data-i18n="lblMa"></label><input id="maWindow" type="number" min="2" max="26" step="1" value="4" /></div>
+        <div><label data-i18n="lblHorizon"></label><input id="horizon" type="number" min="1" max="52" step="1" value="10" /></div>
       </div>
       <div id="mappingPanel" class="hidden">
         <h3 data-i18n="mapTitle"></h3>
@@ -208,7 +209,7 @@ es:{
  noteLbl:'Nota:', note:'acepta semanas, meses o periodos genéricos siempre que las columnas de consumo sean numéricas y contiguas. Descarga el template para ver el formato esperado.',
  sec2:'2. Parámetros ejecutivos', lblService:'Nivel de servicio objetivo (%)', lblLtUnit:'Unidad de LT / GR', days:'Días', weeksU:'Semanas',
  lblDefLT:'LT default si falta', lblDefGR:'GR default si falta', lblAlpha:'Alfa suavización', lblBeta:'Beta tendencia', lblGamma:'Gamma estacionalidad',
- lblSeason:'Longitud estacional', auto:'Auto', exclOut:'Excluir outliers', exclOut2:'de métricas y pronóstico', lblIqr:'Regla IQR: Q3 + k*IQR', lblMa:'Lookback promedio móvil',
+ lblSeason:'Longitud estacional', auto:'Auto', exclOut:'Excluir outliers', exclOut2:'de métricas y pronóstico', lblIqr:'Regla IQR: Q3 + k*IQR', lblMa:'Lookback promedio móvil', lblHorizon:'Horizonte pronóstico (periodos)',
  mapTitle:'Mapeo detectado', mapSku:'SKU / Material', mapLt:'LT manufactura', mapGr:'GR processing / tránsito', mapFirst:'Primer periodo', mapLast:'Último periodo',
  analyzeBtn:'Analizar SKUs', resetBtn:'Limpiar',
  kSkus:'SKUs analizados', kSkusNote:'Registros válidos procesados', kSS:'Safety stock total', kSSNote:'Unidades estimadas',
@@ -237,7 +238,7 @@ es:{
  recLumpy:m=>`Demanda lumpy. Evitar forecast tradicional puro; usar ${m}, política de revisión periódica/min-max y validación comercial.`,
  close:'✕ Cerrar', dSeries:'Serie histórica, outliers y forecast',
  dAvg:'Prom / periodo', dSS:'Safety stock', dRop:'Punto de reorden', dFc:'Forecast sig. periodo',
- legActual:'Demanda', legMA:'Promedio móvil', legOut:'Outlier', legFc:'Forecast',
+ legActual:'Demanda', legMA:'Promedio móvil', legOut:'Outlier', legFc:'Forecast', legSS:'Safety stock (SS)', legRop:'Punto de reorden (ROP)',
  axPeriods:'Periodos', adiAxis:'ADI / intervalo promedio de demanda',
  tplData:'Datos', tplInstr:'Instrucciones', tplName:'template_forecast_skus.xlsx',
  pdfTitle:'SKU Forecast & Safety Stock Analyzer - Reporte Ejecutivo', pdfDate:'Fecha: ', pdfSkus:'SKUs analizados: ', pdfSS:'Safety stock total: ',
@@ -254,7 +255,7 @@ en:{
  noteLbl:'Note:', note:'weeks, months or generic periods are accepted as long as consumption columns are numeric and contiguous. Download the template to see the expected format.',
  sec2:'2. Executive parameters', lblService:'Target service level (%)', lblLtUnit:'LT / GR unit', days:'Days', weeksU:'Weeks',
  lblDefLT:'Default LT if missing', lblDefGR:'Default GR if missing', lblAlpha:'Smoothing alpha', lblBeta:'Trend beta', lblGamma:'Seasonality gamma',
- lblSeason:'Season length', auto:'Auto', exclOut:'Exclude outliers', exclOut2:'from metrics and forecast', lblIqr:'IQR rule: Q3 + k*IQR', lblMa:'Moving-average lookback',
+ lblSeason:'Season length', auto:'Auto', exclOut:'Exclude outliers', exclOut2:'from metrics and forecast', lblIqr:'IQR rule: Q3 + k*IQR', lblMa:'Moving-average lookback', lblHorizon:'Forecast horizon (periods)',
  mapTitle:'Detected mapping', mapSku:'SKU / Material', mapLt:'Manufacturing LT', mapGr:'GR processing / transit', mapFirst:'First period', mapLast:'Last period',
  analyzeBtn:'Analyze SKUs', resetBtn:'Reset',
  kSkus:'SKUs analyzed', kSkusNote:'Valid records processed', kSS:'Total safety stock', kSSNote:'Estimated units',
@@ -283,7 +284,7 @@ en:{
  recLumpy:m=>`Lumpy demand. Avoid pure traditional forecasting; use ${m}, periodic review/min-max policy and commercial validation.`,
  close:'✕ Close', dSeries:'Historical series, outliers and forecast',
  dAvg:'Avg / period', dSS:'Safety stock', dRop:'Reorder point', dFc:'Next period forecast',
- legActual:'Demand', legMA:'Moving average', legOut:'Outlier', legFc:'Forecast',
+ legActual:'Demand', legMA:'Moving average', legOut:'Outlier', legFc:'Forecast', legSS:'Safety stock (SS)', legRop:'Reorder point (ROP)',
  axPeriods:'Periods', adiAxis:'ADI / average demand interval',
  tplData:'Data', tplInstr:'Instructions', tplName:'forecast_sku_template.xlsx',
  pdfTitle:'SKU Forecast & Safety Stock Analyzer - Executive Report', pdfDate:'Date: ', pdfSkus:'SKUs analyzed: ', pdfSS:'Total safety stock: ',
@@ -425,6 +426,7 @@ function currentParams(){
     beta: clamp(safeNum($('beta').value)||0.1,0.01,0.99),
     gamma: clamp(safeNum($('gamma').value)||0.1,0.01,0.99),
     maWindow: Math.max(2,Math.round(safeNum($('maWindow').value)||4)),
+    horizon: clamp(Math.round(safeNum($('horizon').value)||10),1,52),
     seasonLen: $('seasonLen').value,
     excludeOutliers: $('excludeOutliers').checked,
     iqrK: clamp(safeNum($('iqrK').value)||1.5,1,5),
@@ -487,11 +489,13 @@ function calcSkuMetrics(sku,row,demand,meta,p){
   const cycleStock = Math.max(0,avg*ltWeeks);
   const reorderPoint = cycleStock + advancedSS;
   const forecastObj = chooseForecastModel(modelDemand,demandClass,p);
+  const fpath = forecastPath(modelDemand,forecastObj.model,p,resolveSeasonLen(modelDemand.length,p.seasonLen),p.horizon);
+  const fNext = fpath[0] ?? forecastObj.forecast;
   const serviceRisk = riskBand(demandClass,cv,adi,ltWeeks);
   return {
     sku, ltRaw, grRaw, ltWeeks, periods:demand.length, demandWeeks:nonzeroClean.length, totalDemand:total, avgWeekly:avg, sdWeekly:sd,
     cv, cv2, adi, demandClass, abc:'', xyz:'', abcxyz:'', serviceLevel:p.serviceLevel, z, basicSS, advancedSS, reorderPoint,
-    forecastNext:forecastObj.forecast, forecastLT:forecastObj.forecast*Math.max(1,ltWeeks), model:forecastObj.model, modelError:forecastObj.error,
+    forecastNext:fNext, forecastPath:fpath, forecastLT:fNext*Math.max(1,ltWeeks), model:forecastObj.model, modelError:forecastObj.error,
     outliers, outlierFence:upper, serviceRisk, meta, demand, outlierFlags, maWindow:p.maWindow
   };
 }
@@ -541,6 +545,24 @@ function croston(y,a,sba=false){
   return sba ? (1-a/2)*f : f;
 }
 function tsb(y,a){ const nz=y.filter(v=>v>0); if(!nz.length) return 0; let prob=nz.length/y.length, size=mean(nz); for(const v of y){ const occ=v>0?1:0; prob=a*occ+(1-a)*prob; if(v>0) size=a*v+(1-a)*size; } return prob*size; }
+// h-step-ahead forecast path for the chosen model
+function forecastPath(y,model,p,seasonLen,h){
+  const a=p.alpha,b=p.beta,g=p.gamma,n=y.length;
+  if(!n||model==='No forecast') return Array(h).fill(0);
+  if(model==='Holt'){
+    let l=y[0]||0, tr=(y[1]??y[0])-y[0];
+    for(let i=1;i<n;i++){ const prev=l; l=a*y[i]+(1-a)*(l+tr); tr=b*(l-prev)+(1-b)*tr; }
+    return Array.from({length:h},(_,k)=>Math.max(0,l+(k+1)*tr));
+  }
+  if(model==='Holt-Winters' && n>=seasonLen*2){
+    const s=seasonLen; let l=mean(y.slice(0,s)); let tr=(mean(y.slice(s,2*s))-mean(y.slice(0,s)))/s;
+    const seas=[]; for(let i=0;i<s;i++) seas[i]=(y[i]||0)-l;
+    for(let i=s;i<n;i++){ const idx=i%s; const prevL=l; l=a*(y[i]-seas[idx])+(1-a)*(l+tr); tr=b*(l-prevL)+(1-b)*tr; seas[idx]=g*(y[i]-l)+(1-g)*seas[idx]; }
+    return Array.from({length:h},(_,k)=>Math.max(0,l+(k+1)*tr+seas[(n+k)%s]));
+  }
+  const f=Math.max(0,forecastModel(y,model,p,seasonLen)||0);
+  return Array(h).fill(f);
+}
 function holtWintersAdditive(y,s,a,b,g){ if(y.length<s*2) return NaN; let l=mean(y.slice(0,s)); let tr=(mean(y.slice(s,2*s))-mean(y.slice(0,s)))/s; let seas=[]; for(let i=0;i<s;i++) seas[i]=(y[i]||0)-l; for(let i=s;i<y.length;i++){ const idx=i%s; const prevL=l; l=a*(y[i]-seas[idx])+(1-a)*(l+tr); tr=b*(l-prevL)+(1-b)*tr; seas[idx]=g*(y[i]-l)+(1-g)*seas[idx]; } return Math.max(0,l+tr+seas[y.length%s]); }
 
 function applyFilters(){
@@ -617,29 +639,45 @@ function openDetail(r){
   ].map(([l,v])=>`<div class="dstat"><div class="l">${escapeHtml(l)}</div><div class="v">${v}</div></div>`).join('');
   $('dRec').textContent=recommendation(r)+` — ${t('thModel')}: ${r.model} (WMAPE ${fmt(r.modelError*100,1)}%)`;
   $('dLegend').innerHTML=[
-    [css('--brand2'),t('legActual')],[css('--warn'),t('legMA')],[css('--bad'),t('legOut')],[css('--ok'),t('legFc')]
+    [css('--brand2'),t('legActual')],[css('--warn'),t('legMA')],[css('--bad'),t('legOut')],[css('--ok'),t('legFc')],[css('--brand'),t('legRop')],[css('--axislabel'),t('legSS')]
   ].map(([c,l])=>`<span><span class="dot" style="background:${c}"></span>${escapeHtml(l)}</span>`).join('');
   drawDetailChart($('detailChart'), r);
   $('detailModal').classList.remove('hidden');
 }
 function drawDetailChart(svg,r){
   svgClear(svg);
-  const W=svg.clientWidth||800,H=280,padL=48,padR=20,padT=12,padB=30;
+  const W=svg.clientWidth||800,H=280,padL=48,padR=44,padT=12,padB=30;
   const y=r.demand, n=y.length; if(!n) return;
-  const maxY=Math.max(1,...y, r.forecastNext)*1.08;
-  const xs=i=>padL+(W-padL-padR)*i/Math.max(1,n); const ys=v=>H-padB-(H-padT-padB)*v/maxY;
+  const fp=r.forecastPath||[], total=n+fp.length;
+  const maxY=Math.max(1,...y,...fp, r.reorderPoint, r.advancedSS)*1.08;
+  const xs=i=>padL+(W-padL-padR)*i/Math.max(1,total); const ys=v=>H-padB-(H-padT-padB)*v/maxY;
   for(let g=0;g<=4;g++){ const gy=padT+(H-padT-padB)*g/4; svg.appendChild(node('line',{x1:padL,y1:gy,x2:W-padR,y2:gy,stroke:css('--axis'),'stroke-width':.6})); svg.appendChild(node('text',{x:padL-6,y:gy+3,'text-anchor':'end','font-size':9,fill:css('--axislabel')})).textContent=fmt0(maxY*(1-g/4)); }
-  // bars
-  const bw=Math.max(1,(W-padL-padR)/n-1);
+  // history bars
+  const bw=Math.max(1,(W-padL-padR)/total-1);
   y.forEach((v,i)=>{ if(v<=0) return; svg.appendChild(node('rect',{x:xs(i),y:ys(v),width:bw,height:H-padB-ys(v),fill:r.outlierFlags[i]?css('--bad'):css('--brand2'),opacity:r.outlierFlags[i]?.95:.65,rx:1})); });
   // moving average line
   const w=r.maWindow||4; let d='';
   for(let i=0;i<n;i++){ const seg=y.slice(Math.max(0,i-w+1),i+1); const m=mean(seg); d+=(i?'L':'M')+(xs(i)+bw/2).toFixed(1)+' '+ys(m).toFixed(1)+' '; }
   svg.appendChild(node('path',{d,fill:'none',stroke:css('--warn'),'stroke-width':2}));
-  // forecast marker
-  const fx=xs(n-1)+bw+14, fy=ys(r.forecastNext);
-  svg.appendChild(node('line',{x1:xs(n-1)+bw/2,y1:ys(y[n-1]||0),x2:fx,y2:fy,stroke:css('--ok'),'stroke-width':2,'stroke-dasharray':'5 4'}));
-  svg.appendChild(node('circle',{cx:fx,cy:fy,r:5,fill:css('--ok')}));
+  // divider between history and forecast
+  const dx=xs(n)-1;
+  svg.appendChild(node('line',{x1:dx,y1:padT,x2:dx,y2:H-padB,stroke:css('--axislabel'),'stroke-width':1,'stroke-dasharray':'2 3',opacity:.7}));
+  // forecast path (10+ periods ahead)
+  if(fp.length){
+    let fd='M'+(xs(n-1)+bw/2).toFixed(1)+' '+ys(y[n-1]||0).toFixed(1);
+    fp.forEach((v,k)=>{ fd+='L'+(xs(n+k)+bw/2).toFixed(1)+' '+ys(v).toFixed(1); });
+    svg.appendChild(node('path',{d:fd,fill:'none',stroke:css('--ok'),'stroke-width':2,'stroke-dasharray':'6 4'}));
+    fp.forEach((v,k)=>{ svg.appendChild(node('circle',{cx:xs(n+k)+bw/2,cy:ys(v),r:3.5,fill:css('--ok')})); });
+  }
+  // ROP and SS reference lines
+  const refLine=(val,color,label)=>{
+    if(!Number.isFinite(val)||val<=0) return;
+    const ry=ys(val);
+    svg.appendChild(node('line',{x1:padL,y1:ry,x2:W-padR,y2:ry,stroke:color,'stroke-width':1.6,'stroke-dasharray':'8 4'}));
+    svg.appendChild(node('text',{x:W-padR+4,y:ry+3,'font-size':10,'font-weight':800,fill:color})).textContent=label;
+  };
+  refLine(r.reorderPoint,css('--brand'),'ROP');
+  refLine(r.advancedSS,css('--axislabel'),'SS');
   svg.appendChild(node('text',{x:W/2,y:H-6,'text-anchor':'middle','font-size':10,fill:css('--axislabel')})).textContent=t('axPeriods');
 }
 
@@ -869,10 +907,13 @@ function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=UR
 function downloadXlsx(rows){
   const rr=resultRows(rows);
   const L= lang==='es'
-   ? {i:'Indicador',v:'Valor',s:'SKUs analizados',ss:'Safety stock total',il:'SKUs intermitentes/lumpy',o:'Outliers detectados',sl:'Nivel de servicio',f:'Fecha de generación',sum:'Resumen',res:'Resultados'}
-   : {i:'Indicator',v:'Value',s:'SKUs analyzed',ss:'Total safety stock',il:'Intermittent/lumpy SKUs',o:'Outliers detected',sl:'Service level',f:'Generated on',sum:'Summary',res:'Results'};
-  const summary=[[L.i,L.v],[L.s,rows.length],[L.ss,rows.reduce((s,r)=>s+r.advancedSS,0)],[L.il,rows.filter(r=>['Intermittent','Lumpy'].includes(r.demandClass)).length],[L.o,rows.reduce((s,r)=>s+r.outliers,0)],[L.sl,$('serviceLevel').value+'%'],[L.f,new Date().toLocaleString(locale())],['','Jesús Vázquez — linkedin.com/in/jvazquezh']];
-  const blob=createXlsx([{name:L.sum,rows:summary},{name:L.res,rows:[rr.headers,...rr.data]}]); downloadBlob(blob,'sku_forecast_safety_stock_results.xlsx');
+   ? {i:'Indicador',v:'Valor',s:'SKUs analizados',ss:'Safety stock total',il:'SKUs intermitentes/lumpy',o:'Outliers detectados',sl:'Nivel de servicio',hz:'Horizonte de pronóstico',f:'Fecha de generación',sum:'Resumen',res:'Resultados',fc:'Pronóstico',cls:'Clase demanda',mdl:'Modelo',tot:'Total horizonte'}
+   : {i:'Indicator',v:'Value',s:'SKUs analyzed',ss:'Total safety stock',il:'Intermittent/lumpy SKUs',o:'Outliers detected',sl:'Service level',hz:'Forecast horizon',f:'Generated on',sum:'Summary',res:'Results',fc:'Forecast',cls:'Demand class',mdl:'Model',tot:'Horizon total'};
+  const h=Math.max(0,...rows.map(r=>(r.forecastPath||[]).length));
+  const summary=[[L.i,L.v],[L.s,rows.length],[L.ss,rows.reduce((s,r)=>s+r.advancedSS,0)],[L.il,rows.filter(r=>['Intermittent','Lumpy'].includes(r.demandClass)).length],[L.o,rows.reduce((s,r)=>s+r.outliers,0)],[L.sl,$('serviceLevel').value+'%'],[L.hz,h],[L.f,new Date().toLocaleString(locale())],['','Jesús Vázquez — linkedin.com/in/jvazquezh']];
+  const fcHeaders=['SKU',L.cls,L.mdl,'SS','ROP',...Array.from({length:h},(_,i)=>'P+'+(i+1)),L.tot];
+  const fcData=rows.map(r=>{ const fp=r.forecastPath||[]; return [r.sku,r.demandClass,r.model,Math.round(r.advancedSS*100)/100,Math.round(r.reorderPoint*100)/100,...Array.from({length:h},(_,i)=>Number.isFinite(fp[i])?Math.round(fp[i]*100)/100:''),Math.round(fp.reduce((a,b)=>a+b,0)*100)/100]; });
+  const blob=createXlsx([{name:L.sum,rows:summary},{name:L.res,rows:[rr.headers,...rr.data]},{name:L.fc,rows:[fcHeaders,...fcData]}]); downloadBlob(blob,'sku_forecast_safety_stock_results.xlsx');
 }
 function createXlsx(sheets){
   const files={};
